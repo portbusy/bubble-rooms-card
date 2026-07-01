@@ -2,6 +2,7 @@
 import { resolveRooms } from './rooms.js';
 import { sortRooms } from './sort.js';
 import { buildRoomConfig } from './room-config.js';
+import { SORT_PRESETS, resolveSortSteps } from './sort-presets.js';
 
 class BubbleRoomsCard extends HTMLElement {
   setConfig(config) {
@@ -9,10 +10,8 @@ class BubbleRoomsCard extends HTMLElement {
       label: config.label || 'gruppo_movimento_stanza',
       name_strip_prefix: config.name_strip_prefix || 'Sensori movimento ',
       exclude_entities: config.exclude_entities || [],
-      sort: config.sort || [
-        { attribute: 'last_changed', reverse: true },
-        { attribute: 'state', reverse: true }
-      ]
+      sort: config.sort,
+      sort_preset: config.sort_preset
     };
     this._rooms = new Map(); // entityId -> { wrapper: HTMLElement, el: HTMLElement }
     if (!this._container) {
@@ -78,7 +77,8 @@ class BubbleRoomsCard extends HTMLElement {
       }
     }
 
-    const sortedRooms = sortRooms(hass, rooms, this._config.sort);
+    const sortSteps = resolveSortSteps(this._config);
+    const sortedRooms = sortRooms(hass, rooms, sortSteps);
     sortedRooms.forEach((room, index) => {
       const entry = this._rooms.get(room.entityId);
       if (entry) entry.wrapper.style.order = String(index);
@@ -93,7 +93,8 @@ class BubbleRoomsCard extends HTMLElement {
     return {
       label: 'gruppo_movimento_stanza',
       name_strip_prefix: 'Sensori movimento ',
-      exclude_entities: []
+      exclude_entities: [],
+      sort_preset: 'active_recent'
     };
   }
 
@@ -102,13 +103,25 @@ class BubbleRoomsCard extends HTMLElement {
       schema: [
         { name: 'label', selector: { text: {} } },
         { name: 'name_strip_prefix', selector: { text: {} } },
-        { name: 'exclude_entities', selector: { entity: { multiple: true } } }
+        { name: 'exclude_entities', selector: { entity: { multiple: true } } },
+        {
+          name: 'sort_preset',
+          selector: {
+            select: {
+              options: Object.entries(SORT_PRESETS).map(([value, preset]) => ({
+                value,
+                label: preset.label
+              }))
+            }
+          }
+        }
       ],
       computeLabel(schemaItem) {
         const labels = {
           label: 'Label',
           name_strip_prefix: 'Name prefix to strip',
-          exclude_entities: 'Excluded entities'
+          exclude_entities: 'Excluded entities',
+          sort_preset: 'Ordinamento'
         };
         return labels[schemaItem.name] || schemaItem.name;
       }
