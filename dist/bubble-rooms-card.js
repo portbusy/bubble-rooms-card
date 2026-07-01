@@ -88,6 +88,32 @@ class BubbleRoomsCard extends HTMLElement {
   getCardSize() {
     return (this._rooms ? this._rooms.size : 1) * 3;
   }
+
+  static getStubConfig() {
+    return {
+      label: 'gruppo_movimento_stanza',
+      name_strip_prefix: 'Sensori movimento ',
+      exclude_entities: []
+    };
+  }
+
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: 'label', selector: { text: {} } },
+        { name: 'name_strip_prefix', selector: { text: {} } },
+        { name: 'exclude_entities', selector: { entity: { multiple: true } } }
+      ],
+      computeLabel(schemaItem) {
+        const labels = {
+          label: 'Label',
+          name_strip_prefix: 'Name prefix to strip',
+          exclude_entities: 'Excluded entities'
+        };
+        return labels[schemaItem.name] || schemaItem.name;
+      }
+    };
+  }
 }
 
 customElements.define('bubble-rooms-card', BubbleRoomsCard);
