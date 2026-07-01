@@ -25,9 +25,10 @@ class BubbleRoomsCard extends HTMLElement {
 
   async _updateHass(hass) {
     this._hass = hass;
-    if (!this._helpers) {
-      this._helpers = await window.loadCardHelpers();
+    if (!this._helpersPromise) {
+      this._helpersPromise = window.loadCardHelpers();
     }
+    this._helpers = await this._helpersPromise;
 
     const rooms = resolveRooms(hass, this._config.label);
 
