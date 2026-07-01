@@ -1,4 +1,3 @@
-// src/styles.js
 import { areaEntities } from './area-entities.js';
 
 export function buildRoomStyles(hass, entityId, areaId, excludeEntities) {
