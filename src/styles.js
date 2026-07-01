@@ -1,3 +1,4 @@
+// src/styles.js
 import { areaEntities } from './area-entities.js';
 
 export function buildRoomStyles(hass, entityId, areaId, excludeEntities) {
@@ -5,25 +6,21 @@ export function buildRoomStyles(hass, entityId, areaId, excludeEntities) {
   const trans = attivo
     ? 'background-color 0.45s ease, color 0.45s ease'
     : 'background-color 180s linear, color 180s linear';
-  const cardBg = attivo ? 'rgba(135,145,203,0.19)' : 'rgba(255,255,255,0.4)';
-  const iconBg = attivo ? '#8791CB' : 'rgba(255,255,255,0.55)';
-  const iconFg = attivo ? '#ffffff' : '#6A7078';
-  const stateFg = attivo ? '#565F93' : '#7A808A';
+  const cardBg = attivo
+    ? 'color-mix(in srgb, var(--bubble-main-background-color) 20%, transparent)'
+    : 'color-mix(in srgb, var(--card-background-color, #fff) 40%, transparent)';
+  const iconBg = attivo
+    ? 'var(--bubble-icon-background-color)'
+    : 'color-mix(in srgb, var(--card-background-color, #fff) 55%, transparent)';
+  const iconFg = attivo ? '#ffffff' : 'var(--secondary-text-color)';
+  const stateFg = attivo ? 'var(--bubble-accent-color)' : 'var(--secondary-text-color)';
 
   const excluded = new Set(excludeEntities || []);
   const lights = areaEntities(hass, areaId, 'light').filter((e) => !excluded.has(e));
   const covers = areaEntities(hass, areaId, 'cover').filter((e) => !excluded.has(e));
 
   const bottomButtons = [];
-  let subButtonCss = '';
-  let idx = 1; // slot 1 is reserved for the card's own "main" sub-button
-
   for (const light of lights) {
-    idx += 1;
-    const on = hass.states[light] && hass.states[light].state === 'on';
-    const bg = on ? 'rgba(200,170,120,0.28)' : 'rgba(255,255,255,0.42)';
-    const fg = on ? '#7E6438' : '#6A7078';
-    subButtonCss += `.bubble-sub-button-${idx}{background:${bg} !important;color:${fg} !important;}`;
     bottomButtons.push({
       entity: light,
       state_background: true,
@@ -33,10 +30,7 @@ export function buildRoomStyles(hass, entityId, areaId, excludeEntities) {
       hold_action: { action: 'more-info' }
     });
   }
-
   for (const cover of covers) {
-    idx += 1;
-    subButtonCss += `.bubble-sub-button-${idx}{background:rgba(120,140,162,0.22) !important;color:#4C6078 !important;}`;
     bottomButtons.push({
       entity: cover,
       state_background: true,
@@ -62,7 +56,7 @@ export function buildRoomStyles(hass, entityId, areaId, excludeEntities) {
     `  transition: ${trans} !important;\n` +
     '}\n' +
     `.bubble-icon { color: ${iconFg} !important; transition: ${trans} !important; }\n` +
-    '.bubble-name { color: #23262B !important; font-weight: 600 !important; letter-spacing: -0.02em !important; }\n' +
+    '.bubble-name { color: var(--primary-text-color) !important; font-weight: 600 !important; letter-spacing: -0.02em !important; }\n' +
     '.bubble-state, .bubble-last-changed {\n' +
     `  color: ${stateFg} !important; font-weight: 500 !important;\n` +
     `  transition: color ${attivo ? '0.45s' : '180s'} linear !important;\n` +
@@ -73,7 +67,6 @@ export function buildRoomStyles(hass, entityId, areaId, excludeEntities) {
     '  border: 0.5px solid rgba(255,255,255,0.5) !important;\n' +
     '  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6) !important;\n' +
     '}\n' +
-    subButtonCss +
     '@media (prefers-reduced-motion: reduce) {\n' +
     '  ha-card, .bubble-icon-container, .bubble-icon, .bubble-state, .bubble-last-changed { transition: none !important; }\n' +
     '}\n'

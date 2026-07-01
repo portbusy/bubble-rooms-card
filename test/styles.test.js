@@ -20,39 +20,56 @@ function baseHass(overrides = {}) {
   };
 }
 
-test('active room uses the active card background and 0.45s transition', () => {
+test('active room uses a bubble-accent-tinted background and 0.45s transition', () => {
   const hass = baseHass();
   const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
-  assert.match(css, /background: rgba\(135,145,203,0\.19\) !important/);
+  assert.match(css, /background: color-mix\(in srgb, var\(--bubble-main-background-color\) 20%, transparent\) !important/);
   assert.match(css, /transition: background-color 0\.45s ease, color 0\.45s ease !important/);
 });
 
-test('inactive room uses the inactive card background and 180s transition', () => {
+test('inactive room uses a neutral card-background-color mix and 180s transition', () => {
   const hass = baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } });
   const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
-  assert.match(css, /background: rgba\(255,255,255,0\.4\) !important/);
+  assert.match(css, /background: color-mix\(in srgb, var\(--card-background-color, #fff\) 40%, transparent\) !important/);
   assert.match(css, /transition: background-color 180s linear, color 180s linear !important/);
 });
 
-test('an on light gets the honey background/foreground', () => {
+test('active icon container uses the bubble-card icon background variable directly', () => {
+  const hass = baseHass();
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /\.bubble-icon-container \{\n {2}background: var\(--bubble-icon-background-color\) !important;/);
+});
+
+test('inactive icon container falls back to a neutral card-background-color mix', () => {
+  const hass = baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } });
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /\.bubble-icon-container \{\n {2}background: color-mix\(in srgb, var\(--card-background-color, #fff\) 55%, transparent\) !important;/);
+});
+
+test('.bubble-name follows the theme primary text color instead of a fixed hex', () => {
+  const hass = baseHass();
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /\.bubble-name \{ color: var\(--primary-text-color\) !important; font-weight: 600 !important; letter-spacing: -0\.02em !important; \}/);
+});
+
+test('state text uses bubble-accent-color when active, secondary-text-color when inactive', () => {
+  const active = buildRoomStyles(baseHass(), 'binary_sensor.sala_motion', 'sala', []).css;
+  assert.match(active, /\.bubble-state, \.bubble-last-changed \{\n {2}color: var\(--bubble-accent-color\) !important;/);
+
+  const inactive = buildRoomStyles(
+    baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } }),
+    'binary_sensor.sala_motion', 'sala', []
+  ).css;
+  assert.match(inactive, /\.bubble-state, \.bubble-last-changed \{\n {2}color: var\(--secondary-text-color\) !important;/);
+});
+
+test('no per-index sub-button color CSS is generated (Bubble Card themes them natively)', () => {
   const hass = baseHass({ states: { 'light.sala_madia': { state: 'on' } } });
   const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
-  assert.match(css, /background:rgba\(200,170,120,0\.28\) !important;color:#7E6438 !important/);
+  assert.doesNotMatch(css, /\.bubble-sub-button-\d+/);
 });
 
-test('an off light gets the neutral glass background/foreground', () => {
-  const hass = baseHass();
-  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
-  assert.match(css, /background:rgba\(255,255,255,0\.42\) !important;color:#6A7078 !important/);
-});
-
-test('a cover always gets the slate background/foreground', () => {
-  const hass = baseHass();
-  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
-  assert.match(css, /background:rgba\(120,140,162,0\.22\) !important;color:#4C6078 !important/);
-});
-
-test('bottomButtons lists lights before covers, excluding excludeEntities', () => {
+test('bottomButtons still lists lights before covers, with state_background true, excluding excludeEntities', () => {
   const hass = baseHass();
   const { bottomButtons } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', ['cover.sala_tapparella']);
   assert.deepEqual(bottomButtons.map((b) => b.entity), ['light.sala_madia']);
