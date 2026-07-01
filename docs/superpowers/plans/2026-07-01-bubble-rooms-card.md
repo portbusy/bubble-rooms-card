@@ -895,3 +895,232 @@ Instructions for the user:
 Update `motion_rooms_card.yaml` (or wherever it's referenced in the dashboard)
 to use `type: custom:bubble-rooms-card` as shown in Task 7 Step 4, remove the
 old `custom:auto-entities` block.
+
+---
+
+### Task 9: Configurable chained sort (`sort:` config option)
+
+**Context:** `computeOrder` (Task 4) hardcodes the sort key (active-then-recency).
+The user wants to choose the sort criteria themselves via config, mirroring
+the Jinja pattern they used in the original template:
+
+```jinja
+| sort(attribute='last_changed', reverse=true)
+| sort(attribute='state', reverse=true)
+```
+
+Jinja's `sort` filter is stable, so chaining two calls makes the *last* call
+the primary key and the earlier call the tie-breaker for equal values on the
+primary key. This task replaces `computeOrder` with a general chained-sort
+function driven by a new `sort:` config array, applied with the same
+stable-chained semantics, and removes the now-unused `computeOrder`.
+
+**Files:**
+- Create: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/sort.js`
+- Create: `/Users/davidebertolotti/Downloads/bubble-rooms-card/test/sort.test.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/bubble-rooms-card.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/dist/bubble-rooms-card.js` (mirror src, no build step)
+- Delete: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/order.js`
+- Delete: `/Users/davidebertolotti/Downloads/bubble-rooms-card/test/order.test.js`
+- Delete: `/Users/davidebertolotti/Downloads/bubble-rooms-card/dist/order.js`
+
+**Interfaces:**
+- Consumes: `resolveRooms` (Task 2) output shape `Array<{ entityId, areaId }>`.
+- Produces: `sortRooms(hass, rooms, sortSteps)` → a **new** array (does not
+  mutate `rooms`), sorted by applying each step in `sortSteps` in listed
+  order via `Array.prototype.sort` (stable per spec since ES2019 — Node and
+  all evergreen browsers guarantee this), so the **last** step in the array
+  is the primary key and earlier steps are tie-breakers, exactly mirroring
+  the Jinja chain above.
+- `sortSteps` shape: `Array<{ attribute: 'state' | 'last_changed', reverse: boolean }>`.
+  - `attribute: 'state'` compares `hass.states[entityId].state` (string,
+    ascending unless `reverse`).
+  - `attribute: 'last_changed'` compares `new Date(hass.states[entityId].last_changed).getTime()`
+    (number, ascending unless `reverse`).
+- Default when `sort:` is omitted from card config:
+  `[{ attribute: 'last_changed', reverse: true }, { attribute: 'state', reverse: true }]`
+  — this reproduces today's behavior (active rooms first, most-recent-first
+  within a state group) with no config needed.
+- `bubble-rooms-card.js` no longer imports `computeOrder`; it calls
+  `sortRooms(hass, rooms, this._config.sort)` once per `hass` update and
+  assigns `wrapper.style.order = String(index)` using the position in the
+  returned sorted array, instead of a computed numeric key.
+
+- [ ] **Step 1: Write the failing test**
+
+```javascript
+// test/sort.test.js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { sortRooms } from '../src/sort.js';
+
+function hassWith(states) {
+  return { states };
+}
+
+test('default-equivalent steps: state desc primary, last_changed desc tie-breaker', () => {
+  const rooms = [
+    { entityId: 'binary_sensor.bagno', areaId: 'bagno' },
+    { entityId: 'binary_sensor.camera', areaId: 'camera' },
+    { entityId: 'binary_sensor.sala', areaId: 'sala' }
+  ];
+  const hass = hassWith({
+    'binary_sensor.bagno': { state: 'off', last_changed: '2026-07-01T09:00:00Z' },
+    'binary_sensor.camera': { state: 'on', last_changed: '2026-07-01T08:00:00Z' },
+    'binary_sensor.sala': { state: 'on', last_changed: '2026-07-01T10:00:00Z' }
+  });
+  const sorted = sortRooms(hass, rooms, [
+    { attribute: 'last_changed', reverse: true },
+    { attribute: 'state', reverse: true }
+  ]);
+  assert.deepEqual(sorted.map((r) => r.entityId), [
+    'binary_sensor.sala',   // on, most recent among 'on'
+    'binary_sensor.camera', // on, older
+    'binary_sensor.bagno'   // off
+  ]);
+});
+
+test('sortRooms does not mutate the input array', () => {
+  const rooms = [
+    { entityId: 'binary_sensor.b', areaId: 'b' },
+    { entityId: 'binary_sensor.a', areaId: 'a' }
+  ];
+  const original = [...rooms];
+  const hass = hassWith({
+    'binary_sensor.a': { state: 'on', last_changed: '2026-07-01T09:00:00Z' },
+    'binary_sensor.b': { state: 'off', last_changed: '2026-07-01T10:00:00Z' }
+  });
+  sortRooms(hass, rooms, [{ attribute: 'state', reverse: true }]);
+  assert.deepEqual(rooms, original);
+});
+
+test('a single ascending state sort puts off before on', () => {
+  const rooms = [
+    { entityId: 'binary_sensor.on_one', areaId: 'x' },
+    { entityId: 'binary_sensor.off_one', areaId: 'y' }
+  ];
+  const hass = hassWith({
+    'binary_sensor.on_one': { state: 'on', last_changed: '2026-07-01T09:00:00Z' },
+    'binary_sensor.off_one': { state: 'off', last_changed: '2026-07-01T09:00:00Z' }
+  });
+  const sorted = sortRooms(hass, rooms, [{ attribute: 'state', reverse: false }]);
+  assert.deepEqual(sorted.map((r) => r.entityId), ['binary_sensor.off_one', 'binary_sensor.on_one']);
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npm test`
+Expected: FAIL — `Cannot find module '../src/sort.js'`
+
+- [ ] **Step 3: Write minimal implementation**
+
+```javascript
+// src/sort.js
+function attributeValue(hass, entityId, attribute) {
+  const state = hass.states[entityId];
+  if (!state) return null;
+  if (attribute === 'last_changed') {
+    return new Date(state.last_changed).getTime();
+  }
+  return state.state;
+}
+
+function compareStep(hass, step, entityIdA, entityIdB) {
+  const a = attributeValue(hass, entityIdA, step.attribute);
+  const b = attributeValue(hass, entityIdB, step.attribute);
+  let result = 0;
+  if (a < b) result = -1;
+  else if (a > b) result = 1;
+  return step.reverse ? -result : result;
+}
+
+export function sortRooms(hass, rooms, sortSteps) {
+  let sorted = rooms.slice();
+  for (const step of sortSteps) {
+    sorted = sorted
+      .slice()
+      .sort((a, b) => compareStep(hass, step, a.entityId, b.entityId));
+  }
+  return sorted;
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd /Users/davidebertolotti/Downloads/bubble-rooms-card && npm test`
+Expected: PASS, no failures. `order.test.js` still exists at this point (it's
+deleted later, in Step 6) so the total count includes both the old
+`computeOrder` tests and the new `sort.test.js` tests — don't worry about
+matching an exact number, just confirm zero failures.
+
+- [ ] **Step 5: Wire `sortRooms` into the custom element**
+
+In `src/bubble-rooms-card.js`:
+- Remove `import { computeOrder } from './order.js';`
+- Add `import { sortRooms } from './sort.js';`
+- In `setConfig`, add to `this._config`:
+  ```javascript
+  sort: config.sort || [
+    { attribute: 'last_changed', reverse: true },
+    { attribute: 'state', reverse: true }
+  ]
+  ```
+- In `_updateHass` (or wherever `rooms` is computed via `resolveRooms`),
+  replace the per-room `wrapper.style.order = String(computeOrder(hass, entityId))`
+  assignment with: compute `const sortedRooms = sortRooms(hass, rooms, this._config.sort);`
+  once, then after the existing create/update loop (which can keep iterating
+  over the original `rooms` order for creation/update purposes), assign order
+  by position in `sortedRooms`:
+  ```javascript
+  sortedRooms.forEach((room, index) => {
+    const entry = this._rooms.get(room.entityId);
+    if (entry) entry.wrapper.style.order = String(index);
+  });
+  ```
+- Copy the same change into `dist/bubble-rooms-card.js` (keep identical).
+
+- [ ] **Step 6: Delete the superseded `computeOrder` files**
+
+```bash
+cd /Users/davidebertolotti/Downloads/bubble-rooms-card
+git rm src/order.js test/order.test.js dist/order.js
+```
+
+- [ ] **Step 7: Copy `sort.js` into `dist/` and verify**
+
+```bash
+cp src/sort.js dist/sort.js
+node --check src/bubble-rooms-card.js
+node --check dist/bubble-rooms-card.js
+diff src/bubble-rooms-card.js dist/bubble-rooms-card.js
+npm test
+```
+
+Expected: `node --check` passes for both files, `diff` shows no output, all
+tests pass (no reference to `computeOrder`/`order.js` remains anywhere in
+`src/`, `dist/`, or `test/`).
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add src/sort.js test/sort.test.js src/bubble-rooms-card.js dist/
+git commit -m "feat: replace fixed computeOrder with configurable chained sort"
+```
+
+- [ ] **Step 9: Update README.md**
+
+Add a `sort` row to the configuration table and a short example, matching
+the style of the existing `label`/`name_strip_prefix`/`exclude_entities`
+rows:
+
+```markdown
+| `sort` | `[{attribute: last_changed, reverse: true}, {attribute: state, reverse: true}]` | Chained sort steps (like Jinja's `sort()` filter chained calls — the *last* step is the primary key, earlier steps are tie-breakers). Each step: `attribute` (`state` or `last_changed`) and `reverse` (boolean). |
+```
+
+Commit:
+
+```bash
+git add README.md
+git commit -m "docs: document the sort config option"
+```
