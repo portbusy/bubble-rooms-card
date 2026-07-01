@@ -101,7 +101,7 @@ class BubbleRoomsCard extends HTMLElement {
   static getConfigForm() {
     return {
       schema: [
-        { name: 'label', selector: { text: {} } },
+        { name: 'label', selector: { label: {} } },
         { name: 'name_strip_prefix', selector: { text: {} } },
         { name: 'exclude_entities', selector: { entity: { multiple: true } } },
         {
