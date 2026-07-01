@@ -1967,3 +1967,81 @@ A human must confirm: on a dark theme, room cards now look close to
 opaque/solid like a native Bubble Card (per the user's side-by-side
 screenshot comparison), with room names and icons clearly readable, while
 still keeping the blur/shadow glass effect and the 0.45s/180s transitions.
+
+---
+
+### Task 16: `label` field as a label picker in the visual editor
+
+**Context:** The visual editor's `label` field (Task 11) is currently a
+free-text input — the user has to type the exact label ID by hand. Home
+Assistant's selector system has a built-in `label` selector
+(`selector: { label: {} }`, confirmed against
+https://www.home-assistant.io/docs/blueprint/selectors/) that renders a
+dropdown/picker listing every label defined in the user's Home Assistant
+label registry (Settings → Areas, labels & zones → Labels) and returns the
+selected label's ID as a string — exactly the shape `resolveRooms`
+(`entity.labels.includes(label)`, Task 2) already expects. This task swaps
+the schema entry's selector type; nothing else about how `label` flows
+through the card changes.
+
+**Files:**
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/bubble-rooms-card.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/dist/bubble-rooms-card.js` (mirror src, no build step)
+
+**Interfaces:** none — `setConfig`, `getStubConfig`, `resolveRooms`, and
+every other consumer of `this._config.label` are unaffected; this is a
+pure schema-selector-type change inside `getConfigForm()`.
+
+- [ ] **Step 1: Change the `label` field's selector**
+
+Read the current `src/bubble-rooms-card.js` first (it has `getConfigForm()`
+with a `schema` array whose first entry is
+`{ name: 'label', selector: { text: {} } }`, from Task 11, plus a
+`sort_preset` entry added in Task 13). Change ONLY that one entry:
+
+```javascript
+{ name: 'label', selector: { label: {} } }
+```
+
+Leave `name_strip_prefix` (`text` selector), `exclude_entities` (`entity`
+selector with `multiple: true`), and `sort_preset` (`select` selector)
+exactly as they are — do not reorder the schema array.
+
+- [ ] **Step 2: Copy the identical edit into `dist/bubble-rooms-card.js`**
+
+- [ ] **Step 3: Verify**
+
+```bash
+cd /Users/davidebertolotti/Downloads/bubble-rooms-card
+node --check src/bubble-rooms-card.js
+node --check dist/bubble-rooms-card.js
+diff src/bubble-rooms-card.js dist/bubble-rooms-card.js
+npm test
+```
+
+Expected: both `node --check` calls succeed, `diff` shows no output, all
+tests pass (this task doesn't touch any pure function covered by the Node
+test suite, so the count/results should be identical to before this task).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/bubble-rooms-card.js dist/bubble-rooms-card.js
+git commit -m "feat: use HA's label selector for the label field in the visual editor"
+```
+
+- [ ] **Step 5: Push and tag a new release**
+
+```bash
+git push origin main
+git tag v0.5.0
+git push origin v0.5.0
+gh release create v0.5.0 --title "v0.5.0" --notes "The visual editor's Label field is now a picker listing all labels in your Home Assistant label registry, instead of free text."
+```
+
+- [ ] **Step 6: Manual verification (requires a live Home Assistant instance)**
+
+A human must confirm: in the card's visual editor, the "Label" field is now
+a dropdown/picker showing the user's actual Home Assistant labels (e.g.
+`gruppo_movimento_stanza` appears as a selectable option), not a plain text
+box.
