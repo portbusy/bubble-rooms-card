@@ -1842,3 +1842,128 @@ A human must confirm: after updating via HACS, room cards visually follow
 the current Home Assistant theme's accent/background colors instead of the
 old fixed purple/honey palette, and still show the glass-blur effect and
 the same 0.45s/180s transition timing when a room's motion state changes.
+
+---
+
+### Task 15: Increase background opacity for dark-theme contrast
+
+**Context:** Task 14 made colors theme-aware via `color-mix()`, but on a
+dark Home Assistant theme the resulting cards look washed-out/translucent
+(room name text nearly unreadable) compared to a native Bubble Card, which
+renders solidly opaque. The `color-mix()` percentages chosen in Task 14
+(20% active, 40%/55% inactive) let too much of the page's dark background
+show through the blur. The user confirmed: keep the glass-blur effect and
+the border/box-shadow exactly as they are — just make the backgrounds much
+more opaque (closer to solid) so text/icons have proper contrast on dark
+themes, matching how a native Bubble Card looks (see the user's side-by-side
+screenshot: native Bubble Card on the left is a solid dark card, the
+`bubble-rooms-card` cards on the right are washed-out and pale by
+comparison).
+
+**Files:**
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/styles.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/test/styles.test.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/dist/styles.js` (mirror src, no build step)
+
+**Interfaces:** none — same `buildRoomStyles` signature/return shape as
+Task 14, only the opacity percentages inside the `color-mix()` calls change.
+
+- [ ] **Step 1: Update the test assertions for the new percentages**
+
+In `test/styles.test.js`, update these two tests (leave the other five
+tests from Task 14 unchanged — they don't reference these percentages):
+
+```javascript
+test('active room uses a bubble-accent-tinted background and 0.45s transition', () => {
+  const hass = baseHass();
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /background: color-mix\(in srgb, var\(--bubble-main-background-color\) 70%, transparent\) !important/);
+  assert.match(css, /transition: background-color 0\.45s ease, color 0\.45s ease !important/);
+});
+
+test('inactive room uses a neutral card-background-color mix and 180s transition', () => {
+  const hass = baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } });
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /background: color-mix\(in srgb, var\(--card-background-color, #fff\) 70%, transparent\) !important/);
+  assert.match(css, /transition: background-color 180s linear, color 180s linear !important/);
+});
+```
+
+And this one:
+
+```javascript
+test('inactive icon container falls back to a neutral card-background-color mix', () => {
+  const hass = baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } });
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /\.bubble-icon-container \{\n {2}background: color-mix\(in srgb, var\(--card-background-color, #fff\) 80%, transparent\) !important;/);
+});
+```
+
+(The active icon container test — `var(--bubble-icon-background-color)`
+used directly, no `color-mix` — is unchanged from Task 14, since that value
+was already solid/opaque and isn't part of this fix.)
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npm test`
+Expected: FAIL against the current Task 14 percentages (20%/40%/55%).
+
+- [ ] **Step 3: Update the percentages in `src/styles.js`**
+
+Read the current file first (from Task 14). Change exactly these three
+lines inside `buildRoomStyles`:
+
+```javascript
+  const cardBg = attivo
+    ? 'color-mix(in srgb, var(--bubble-main-background-color) 70%, transparent)'
+    : 'color-mix(in srgb, var(--card-background-color, #fff) 70%, transparent)';
+  const iconBg = attivo
+    ? 'var(--bubble-icon-background-color)'
+    : 'color-mix(in srgb, var(--card-background-color, #fff) 80%, transparent)';
+```
+
+Nothing else in the file changes (border, box-shadow, backdrop-filter,
+transitions, `.bubble-name`, state text colors, and the sub-button removal
+from Task 14 all stay exactly as they are).
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npm test`
+Expected: PASS, no failures.
+
+- [ ] **Step 5: Copy to `dist/` and verify**
+
+```bash
+cd /Users/davidebertolotti/Downloads/bubble-rooms-card
+cp src/styles.js dist/styles.js
+node --check src/styles.js
+node --check dist/styles.js
+diff src/styles.js dist/styles.js
+npm test
+```
+
+Expected: both `node --check` calls succeed, `diff` shows no output, all
+tests pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/styles.js test/styles.test.js dist/styles.js
+git commit -m "fix: increase background opacity for dark-theme contrast"
+```
+
+- [ ] **Step 7: Push and tag a new release**
+
+```bash
+git push origin main
+git tag v0.4.1
+git push origin v0.4.1
+gh release create v0.4.1 --title "v0.4.1" --notes "Fix washed-out/low-contrast card backgrounds on dark themes by increasing color-mix opacity (closer to a native Bubble Card's solid look), while keeping the glass-blur effect, border, and box-shadow unchanged."
+```
+
+- [ ] **Step 8: Manual verification (requires a live Home Assistant instance)**
+
+A human must confirm: on a dark theme, room cards now look close to
+opaque/solid like a native Bubble Card (per the user's side-by-side
+screenshot comparison), with room names and icons clearly readable, while
+still keeping the blur/shadow glass effect and the 0.45s/180s transitions.
