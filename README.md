@@ -25,6 +25,11 @@ name_strip_prefix: "Sensori movimento "
 exclude_entities:
   - light.luci_sala
   - cover.tapparella_camera_sx
+sort:
+  - attribute: last_changed
+    reverse: true
+  - attribute: state
+    reverse: true
 ```
 
 | Key | Default | Description |
@@ -32,3 +37,4 @@ exclude_entities:
 | `label` | `gruppo_movimento_stanza` | Label applied to motion-sensor entities that should get a room card. |
 | `name_strip_prefix` | `"Sensori movimento "` | Prefix stripped from the sensor's friendly name to get the room name. |
 | `exclude_entities` | `[]` | Entity IDs excluded from the light/cover sub-buttons. |
+| `sort` | `[{attribute: last_changed, reverse: true}, {attribute: state, reverse: true}]` | Chained sort steps (like Jinja's `sort()` filter chained calls — the *last* step is the primary key, earlier steps are tie-breakers). Each step: `attribute` (`state` or `last_changed`) and `reverse` (boolean). |
