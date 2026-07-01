@@ -117,3 +117,11 @@ class BubbleRoomsCard extends HTMLElement {
 }
 
 customElements.define('bubble-rooms-card', BubbleRoomsCard);
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'bubble-rooms-card',
+  name: 'Bubble Rooms Card',
+  description: 'One bubble-card button per room, auto-discovered by label, with no DOM-recreation flash on state updates.',
+  preview: false,
+  documentationURL: 'https://github.com/portbusy/bubble-rooms-card'
+});
