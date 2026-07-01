@@ -1,6 +1,6 @@
 // src/bubble-rooms-card.js
 import { resolveRooms } from './rooms.js';
-import { computeOrder } from './order.js';
+import { sortRooms } from './sort.js';
 import { buildRoomConfig } from './room-config.js';
 
 class BubbleRoomsCard extends HTMLElement {
@@ -8,7 +8,11 @@ class BubbleRoomsCard extends HTMLElement {
     this._config = {
       label: config.label || 'gruppo_movimento_stanza',
       name_strip_prefix: config.name_strip_prefix || 'Sensori movimento ',
-      exclude_entities: config.exclude_entities || []
+      exclude_entities: config.exclude_entities || [],
+      sort: config.sort || [
+        { attribute: 'last_changed', reverse: true },
+        { attribute: 'state', reverse: true }
+      ]
     };
     this._rooms = new Map(); // entityId -> { wrapper: HTMLElement, el: HTMLElement }
     if (!this._container) {
@@ -65,7 +69,6 @@ class BubbleRoomsCard extends HTMLElement {
         entry.el.setConfig(config);
       }
       entry.el.hass = hass;
-      entry.wrapper.style.order = String(computeOrder(hass, entityId));
     }
 
     for (const [entityId, entry] of this._rooms) {
@@ -74,6 +77,12 @@ class BubbleRoomsCard extends HTMLElement {
         this._rooms.delete(entityId);
       }
     }
+
+    const sortedRooms = sortRooms(hass, rooms, this._config.sort);
+    sortedRooms.forEach((room, index) => {
+      const entry = this._rooms.get(room.entityId);
+      if (entry) entry.wrapper.style.order = String(index);
+    });
   }
 
   getCardSize() {
