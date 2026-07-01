@@ -1,5 +1,7 @@
 # Bubble Rooms Card
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=portbusy&repository=bubble-rooms-card&category=plugin)
+
 Custom Lovelace card for Home Assistant that renders one [Bubble Card](https://github.com/Clooos/Bubble-Card)
 button per room, auto-discovered from a label on motion-sensor entities.
 Unlike `auto-entities` + a Jinja template, this card keeps the same
@@ -11,6 +13,9 @@ so there's no flash of unstyled content when any tracked entity changes.
 - [Bubble Card](https://github.com/Clooos/Bubble-Card) >= 3.2.3, installed via HACS.
 
 ## Installation (HACS)
+
+Click the badge above (opens HACS's "add repository" screen directly in
+your own Home Assistant instance), or add manually:
 
 1. HACS → the three-dot menu → **Custom repositories**.
 2. Add `https://github.com/portbusy/bubble-rooms-card`, category **Dashboard**.
