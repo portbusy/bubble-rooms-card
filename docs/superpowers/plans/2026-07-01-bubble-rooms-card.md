@@ -1356,3 +1356,211 @@ A human must confirm: in HACS, "Bubble Rooms Card" shows an available
 update to v0.2.0; after updating and reloading the dashboard, "Bubble Rooms
 Card" appears when searching in the "Add Card" dialog (not just available
 via manual YAML).
+
+---
+
+### Task 13: Sort preset dropdown in the visual editor
+
+**Context:** Task 11 deliberately left `sort` out of `getConfigForm` because
+it's an array of `{attribute, reverse}` objects, not a simple form field.
+The user still wants to choose a sort behavior from the visual editor, so
+this task adds a `sort_preset` select field with a few named, pre-built
+combinations. `setConfig` translates the selected preset into the real
+`sort` array. An explicit raw `sort:` key in YAML (already supported since
+Task 9) still overrides the preset, for advanced users who want a
+combination not covered by the presets.
+
+**Files:**
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/bubble-rooms-card.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/dist/bubble-rooms-card.js` (mirror src, no build step)
+- Create: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/sort-presets.js`
+- Create: `/Users/davidebertolotti/Downloads/bubble-rooms-card/test/sort-presets.test.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/README.md`
+
+**Interfaces:**
+- Consumes: nothing new from prior tasks besides `sortRooms`'s existing
+  `sortSteps` shape (Task 9): `Array<{ attribute: 'state' | 'last_changed', reverse: boolean }>`.
+- Produces: `SORT_PRESETS`, an exported `Record<string, { label: string, steps: Array<{attribute, reverse}> }>`
+  from `src/sort-presets.js`, and `resolveSortSteps(config)` → `Array<{attribute, reverse}>`,
+  which implements the precedence: explicit `config.sort` wins if present,
+  otherwise look up `config.sort_preset` in `SORT_PRESETS` (falling back to
+  the `'active_recent'` preset if the value is missing or unrecognized).
+
+- [ ] **Step 1: Write the failing test**
+
+```javascript
+// test/sort-presets.test.js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { SORT_PRESETS, resolveSortSteps } from '../src/sort-presets.js';
+
+test('SORT_PRESETS has the four expected keys with the right steps', () => {
+  assert.deepEqual(SORT_PRESETS.active_recent.steps, [
+    { attribute: 'last_changed', reverse: true },
+    { attribute: 'state', reverse: true }
+  ]);
+  assert.deepEqual(SORT_PRESETS.recent.steps, [{ attribute: 'last_changed', reverse: true }]);
+  assert.deepEqual(SORT_PRESETS.active.steps, [{ attribute: 'state', reverse: true }]);
+  assert.deepEqual(SORT_PRESETS.none.steps, []);
+});
+
+test('resolveSortSteps prefers an explicit sort array over sort_preset', () => {
+  const explicit = [{ attribute: 'state', reverse: false }];
+  const result = resolveSortSteps({ sort: explicit, sort_preset: 'none' });
+  assert.deepEqual(result, explicit);
+});
+
+test('resolveSortSteps uses the named preset when sort is absent', () => {
+  const result = resolveSortSteps({ sort_preset: 'recent' });
+  assert.deepEqual(result, [{ attribute: 'last_changed', reverse: true }]);
+});
+
+test('resolveSortSteps falls back to active_recent when sort_preset is missing or unknown', () => {
+  assert.deepEqual(resolveSortSteps({}), SORT_PRESETS.active_recent.steps);
+  assert.deepEqual(resolveSortSteps({ sort_preset: 'nonexistent' }), SORT_PRESETS.active_recent.steps);
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npm test`
+Expected: FAIL — `Cannot find module '../src/sort-presets.js'`
+
+- [ ] **Step 3: Write minimal implementation**
+
+```javascript
+// src/sort-presets.js
+export const SORT_PRESETS = {
+  active_recent: {
+    label: 'Attivo prima, poi più recente',
+    steps: [
+      { attribute: 'last_changed', reverse: true },
+      { attribute: 'state', reverse: true }
+    ]
+  },
+  recent: {
+    label: 'Solo più recente',
+    steps: [{ attribute: 'last_changed', reverse: true }]
+  },
+  active: {
+    label: 'Solo stato (attivo prima)',
+    steps: [{ attribute: 'state', reverse: true }]
+  },
+  none: {
+    label: 'Nessuno (ordine alfabetico entity_id)',
+    steps: []
+  }
+};
+
+export function resolveSortSteps(config) {
+  if (config.sort) return config.sort;
+  const preset = SORT_PRESETS[config.sort_preset];
+  return preset ? preset.steps : SORT_PRESETS.active_recent.steps;
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd /Users/davidebertolotti/Downloads/bubble-rooms-card && npm test`
+Expected: PASS, no failures (all prior tests plus the 4 new ones).
+
+- [ ] **Step 5: Wire into the custom element**
+
+Read the current `src/bubble-rooms-card.js` first. Changes:
+- Add `import { SORT_PRESETS, resolveSortSteps } from './sort-presets.js';`
+- In `setConfig`, replace the existing
+  `sort: config.sort || [{ attribute: 'last_changed', reverse: true }, { attribute: 'state', reverse: true }]`
+  line with storing the raw config and resolving lazily in `_updateHass`
+  instead — simplest correct approach: keep `this._config` holding the
+  original `config` object's `sort` and `sort_preset` keys as given (don't
+  precompute), i.e.:
+  ```javascript
+  this._config = {
+    label: config.label || 'gruppo_movimento_stanza',
+    name_strip_prefix: config.name_strip_prefix || 'Sensori movimento ',
+    exclude_entities: config.exclude_entities || [],
+    sort: config.sort,
+    sort_preset: config.sort_preset
+  };
+  ```
+- In `_updateHass`, where `sortRooms(hass, rooms, this._config.sort)` is
+  currently called, change it to:
+  ```javascript
+  const sortSteps = resolveSortSteps(this._config);
+  const sortedRooms = sortRooms(hass, rooms, sortSteps);
+  ```
+- In `getConfigForm()`'s `schema` array, add a new field for the preset
+  select, built from `SORT_PRESETS` so the options list and the preset
+  definitions can't drift apart:
+  ```javascript
+  {
+    name: 'sort_preset',
+    selector: {
+      select: {
+        options: Object.entries(SORT_PRESETS).map(([value, preset]) => ({
+          value,
+          label: preset.label
+        }))
+      }
+    }
+  }
+  ```
+- In `getConfigForm()`'s `computeLabel`, add a label for the new field:
+  `sort_preset: 'Ordinamento'` alongside the existing three entries.
+- In `getStubConfig()`, add `sort_preset: 'active_recent'` to the returned
+  defaults object.
+- Copy every change into `dist/bubble-rooms-card.js` identically, and also
+  copy `src/sort-presets.js` to `dist/sort-presets.js`.
+
+- [ ] **Step 6: Verify**
+
+```bash
+cd /Users/davidebertolotti/Downloads/bubble-rooms-card
+node --check src/bubble-rooms-card.js
+node --check dist/bubble-rooms-card.js
+diff src/bubble-rooms-card.js dist/bubble-rooms-card.js
+diff src/sort-presets.js dist/sort-presets.js
+npm test
+```
+
+Expected: both `node --check` calls succeed, both `diff` calls show no
+output, `npm test` passes with zero failures.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/sort-presets.js test/sort-presets.test.js src/bubble-rooms-card.js dist/
+git commit -m "feat: add sort_preset dropdown to the visual editor"
+```
+
+- [ ] **Step 8: Update README.md**
+
+Add a `sort_preset` row to the configuration table (placed before the
+existing `sort` row, since it's the simpler/preferred option for most
+users):
+
+```markdown
+| `sort_preset` | `active_recent` | Named sort preset chosen from the visual editor's dropdown: `active_recent`, `recent`, `active`, or `none`. Ignored if `sort` is also set. |
+```
+
+Commit:
+
+```bash
+git add README.md
+git commit -m "docs: document the sort_preset config option"
+```
+
+- [ ] **Step 9: Push and tag a new release**
+
+```bash
+git push origin main
+git tag v0.3.0
+git push origin v0.3.0
+gh release create v0.3.0 --title "v0.3.0" --notes "Add sort_preset dropdown to the visual editor."
+```
+
+- [ ] **Step 10: Manual verification (requires a live Home Assistant instance)**
+
+A human must confirm: after updating via HACS, the card's visual editor
+shows an "Ordinamento" dropdown with the four preset labels, and changing
+it visibly reorders the room cards on the dashboard.
