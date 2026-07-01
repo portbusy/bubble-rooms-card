@@ -1124,3 +1124,235 @@ Commit:
 git add README.md
 git commit -m "docs: document the sort config option"
 ```
+
+---
+
+### Task 10: "Open in Home Assistant" HACS badge in README
+
+**Context:** The user wants a one-click button on the GitHub repo landing page
+(rendered from README.md) that opens the user's own Home Assistant instance
+directly to the "add this HACS repository" screen, instead of manually
+copy-pasting the URL into HACS's custom-repositories dialog. Home Assistant
+provides a standard badge + redirect link for exactly this
+(`my.home-assistant.io`).
+
+**Files:**
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/README.md`
+
+**Interfaces:** none (documentation only).
+
+- [ ] **Step 1: Add the badge**
+
+Insert this immediately under the `# Bubble Rooms Card` heading, above the
+existing description paragraph:
+
+```markdown
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=portbusy&repository=bubble-rooms-card&category=plugin)
+```
+
+- [ ] **Step 2: Simplify the manual "Installation (HACS)" section**
+
+Since the badge now does steps 1-2 automatically, reduce the existing
+3-step manual list to 2 steps (keep the manual path documented as a
+fallback for users who don't want to click the badge):
+
+```markdown
+## Installation (HACS)
+
+Click the badge above (opens HACS's "add repository" screen directly in
+your own Home Assistant instance), or add manually:
+
+1. HACS → the three-dot menu → **Custom repositories**.
+2. Add `https://github.com/portbusy/bubble-rooms-card`, category **Dashboard**.
+3. Install "Bubble Rooms Card", reload resources.
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+cd /Users/davidebertolotti/Downloads/bubble-rooms-card
+git add README.md
+git commit -m "docs: add My Home Assistant one-click HACS install badge"
+```
+
+- [ ] **Step 4: Push**
+
+```bash
+git push origin main
+```
+
+---
+
+### Task 11: Visual config editor via `getConfigForm`
+
+**Context:** Right now the card can only be configured by hand-editing YAML.
+The user wants a GUI editor, like most Lovelace cards have, so `label`,
+`name_strip_prefix`, and `exclude_entities` can be set through form fields in
+the dashboard's card editor instead of YAML. Home Assistant supports this
+without writing a custom editor element or pulling in LitElement: a card
+class can define `static getConfigForm()` returning `{ schema, computeLabel }`,
+and the Lovelace editor host renders the form itself via its built-in
+`<ha-form>` component and writes the result back through the normal
+`setConfig()` path — no manual event wiring needed.
+
+`sort` is intentionally left out of the visual editor (it's a list of
+objects with two possible attribute values each — not a good fit for a
+simple form, and the default already reproduces today's behavior). Advanced
+users can still set it via the YAML editor, which every Lovelace card
+supports regardless of `getConfigForm`.
+
+**Files:**
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/bubble-rooms-card.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/dist/bubble-rooms-card.js` (mirror src, no build step)
+
+**Interfaces:**
+- Produces: `static getConfigForm()` on the `BubbleRoomsCard` class, and
+  `static getStubConfig()` returning the config the "Add Card" picker starts
+  new instances of this card with.
+
+- [ ] **Step 1: Add `getStubConfig` and `getConfigForm` to the class**
+
+Read the current `src/bubble-rooms-card.js` first (it already has
+`setConfig`, the `set hass`/`_updateHass` pair, and `getCardSize`) — add
+these two static methods to the `BubbleRoomsCard` class, alongside the
+existing instance methods (order doesn't matter within the class body):
+
+```javascript
+static getStubConfig() {
+  return {
+    label: 'gruppo_movimento_stanza',
+    name_strip_prefix: 'Sensori movimento ',
+    exclude_entities: []
+  };
+}
+
+static getConfigForm() {
+  return {
+    schema: [
+      { name: 'label', selector: { text: {} } },
+      { name: 'name_strip_prefix', selector: { text: {} } },
+      { name: 'exclude_entities', selector: { entity: { multiple: true } } }
+    ],
+    computeLabel(schemaItem) {
+      const labels = {
+        label: 'Label',
+        name_strip_prefix: 'Name prefix to strip',
+        exclude_entities: 'Excluded entities'
+      };
+      return labels[schemaItem.name] || schemaItem.name;
+    }
+  };
+}
+```
+
+- [ ] **Step 2: Copy the same two methods into `dist/bubble-rooms-card.js`**
+
+`src/bubble-rooms-card.js` and `dist/bubble-rooms-card.js` must stay
+identical (no build step). Apply the exact same edit to both files.
+
+- [ ] **Step 3: Verify with `node --check`**
+
+```bash
+cd /Users/davidebertolotti/Downloads/bubble-rooms-card
+node --check src/bubble-rooms-card.js
+node --check dist/bubble-rooms-card.js
+diff src/bubble-rooms-card.js dist/bubble-rooms-card.js
+```
+
+Expected: both `node --check` calls succeed, `diff` shows no output.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/bubble-rooms-card.js dist/bubble-rooms-card.js
+git commit -m "feat: add visual config editor via getConfigForm"
+```
+
+- [ ] **Step 5: Manual verification (requires a live Home Assistant instance)**
+
+This cannot be automated — a human must confirm it in the browser:
+1. Update the HACS-installed copy or reload the resource on the test
+   dashboard (HACS "Redownload" or update to the new commit).
+2. In the dashboard editor, add a new card, search for "Bubble Rooms Card"
+   (this also confirms Task 12's card-picker registration, if done first).
+3. Confirm the card's edit dialog shows a form with "Label", "Name prefix to
+   strip", and "Excluded entities" fields instead of only a YAML box, and
+   that changing a field value updates the live preview.
+
+---
+
+### Task 12: Card-picker registration (`window.customCards`)
+
+**Context:** Today, adding this card to a dashboard requires typing
+`type: custom:bubble-rooms-card` by hand in the YAML editor — it doesn't
+appear in Home Assistant's "Add Card" picker dialog like built-in and other
+HACS-installed cards do. Home Assistant's card picker reads a well-known
+global array, `window.customCards`, that any custom card module can push an
+entry onto when it loads. This task adds that registration so the card
+appears in the picker with a name/description, without needing HACS's
+separate (unrelated) card-picker manifest.
+
+**Files:**
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/bubble-rooms-card.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/dist/bubble-rooms-card.js` (mirror src, no build step)
+
+**Interfaces:** none new (this is a side-effecting registration at module
+load time, not a function other code calls).
+
+- [ ] **Step 1: Register the card**
+
+At the bottom of `src/bubble-rooms-card.js`, right after the existing
+`customElements.define('bubble-rooms-card', BubbleRoomsCard);` line, add:
+
+```javascript
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'bubble-rooms-card',
+  name: 'Bubble Rooms Card',
+  description: 'One bubble-card button per room, auto-discovered by label, with no DOM-recreation flash on state updates.',
+  preview: false,
+  documentationURL: 'https://github.com/portbusy/bubble-rooms-card'
+});
+```
+
+- [ ] **Step 2: Copy the same block into `dist/bubble-rooms-card.js`**
+
+Apply the exact same edit to both files so they stay identical.
+
+- [ ] **Step 3: Verify with `node --check`**
+
+```bash
+cd /Users/davidebertolotti/Downloads/bubble-rooms-card
+node --check src/bubble-rooms-card.js
+node --check dist/bubble-rooms-card.js
+diff src/bubble-rooms-card.js dist/bubble-rooms-card.js
+```
+
+Expected: both succeed, `diff` shows no output.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/bubble-rooms-card.js dist/bubble-rooms-card.js
+git commit -m "feat: register in the Lovelace Add Card picker"
+```
+
+- [ ] **Step 5: Push and tag a new release**
+
+HACS/Lovelace resource caching means the user needs to update/redownload
+through HACS to pick up the new commit; tagging a new version makes that
+update visible in the HACS UI as an available update.
+
+```bash
+git push origin main
+git tag v0.2.0
+git push origin v0.2.0
+gh release create v0.2.0 --title "v0.2.0" --notes "Add sort config, visual editor, card-picker registration, and HACS one-click install badge."
+```
+
+- [ ] **Step 6: Manual verification (requires a live Home Assistant instance)**
+
+A human must confirm: in HACS, "Bubble Rooms Card" shows an available
+update to v0.2.0; after updating and reloading the dashboard, "Bubble Rooms
+Card" appears when searching in the "Add Card" dialog (not just available
+via manual YAML).
