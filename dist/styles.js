@@ -6,11 +6,11 @@ export function buildRoomStyles(hass, entityId, areaId, excludeEntities) {
     ? 'background-color 0.45s ease, color 0.45s ease'
     : 'background-color 180s linear, color 180s linear';
   const cardBg = attivo
-    ? 'color-mix(in srgb, var(--bubble-main-background-color) 20%, transparent)'
-    : 'color-mix(in srgb, var(--card-background-color, #fff) 40%, transparent)';
+    ? 'color-mix(in srgb, var(--bubble-main-background-color) 70%, transparent)'
+    : 'color-mix(in srgb, var(--card-background-color, #fff) 70%, transparent)';
   const iconBg = attivo
     ? 'var(--bubble-icon-background-color)'
-    : 'color-mix(in srgb, var(--card-background-color, #fff) 55%, transparent)';
+    : 'color-mix(in srgb, var(--card-background-color, #fff) 80%, transparent)';
   const iconFg = attivo ? '#ffffff' : 'var(--secondary-text-color)';
   const stateFg = attivo ? 'var(--bubble-accent-color)' : 'var(--secondary-text-color)';
 

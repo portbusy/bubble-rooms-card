@@ -23,14 +23,14 @@ function baseHass(overrides = {}) {
 test('active room uses a bubble-accent-tinted background and 0.45s transition', () => {
   const hass = baseHass();
   const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
-  assert.match(css, /background: color-mix\(in srgb, var\(--bubble-main-background-color\) 20%, transparent\) !important/);
+  assert.match(css, /background: color-mix\(in srgb, var\(--bubble-main-background-color\) 70%, transparent\) !important/);
   assert.match(css, /transition: background-color 0\.45s ease, color 0\.45s ease !important/);
 });
 
 test('inactive room uses a neutral card-background-color mix and 180s transition', () => {
   const hass = baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } });
   const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
-  assert.match(css, /background: color-mix\(in srgb, var\(--card-background-color, #fff\) 40%, transparent\) !important/);
+  assert.match(css, /background: color-mix\(in srgb, var\(--card-background-color, #fff\) 70%, transparent\) !important/);
   assert.match(css, /transition: background-color 180s linear, color 180s linear !important/);
 });
 
@@ -43,7 +43,7 @@ test('active icon container uses the bubble-card icon background variable direct
 test('inactive icon container falls back to a neutral card-background-color mix', () => {
   const hass = baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } });
   const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
-  assert.match(css, /\.bubble-icon-container \{\n {2}background: color-mix\(in srgb, var\(--card-background-color, #fff\) 55%, transparent\) !important;/);
+  assert.match(css, /\.bubble-icon-container \{\n {2}background: color-mix\(in srgb, var\(--card-background-color, #fff\) 80%, transparent\) !important;/);
 });
 
 test('.bubble-name follows the theme primary text color instead of a fixed hex', () => {

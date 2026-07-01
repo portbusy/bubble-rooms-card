@@ -34,7 +34,7 @@ test('buildRoomConfig produces a bubble-card config with stripped name and sub_b
     tap_action: { action: 'toggle' },
     hold_action: { action: 'more-info' }
   });
-  assert.match(config.styles, /background: color-mix\(in srgb, var\(--bubble-main-background-color\) 20%, transparent\)/);
+  assert.match(config.styles, /background: color-mix\(in srgb, var\(--bubble-main-background-color\) 70%, transparent\)/);
   assert.deepEqual(config.sub_button.main, [
     { show_last_updated: true, show_state: false, show_icon: false, state_background: false }
   ]);
