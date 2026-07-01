@@ -1564,3 +1564,281 @@ gh release create v0.3.0 --title "v0.3.0" --notes "Add sort_preset dropdown to t
 A human must confirm: after updating via HACS, the card's visual editor
 shows an "Ordinamento" dropdown with the four preset labels, and changing
 it visibly reorders the room cards on the dashboard.
+
+---
+
+### Task 14: Theme-following colors via Bubble Card / Home Assistant CSS variables
+
+**Context:** `buildRoomStyles` (Task 5) hardcodes its own color palette (a
+fixed purple accent, a fixed honey/slate palette for light/cover
+sub-buttons). The user wants the card to instead follow whatever colors
+Bubble Card and the user's Home Assistant theme already use by default,
+while KEEPING this project's own visual effects: the glass blur, the
+box-shadow layering, the border, and the slow 180s fade-to-neutral
+transition when a room goes inactive.
+
+Two concrete findings from research (Bubble Card v3.2.3, README's
+"Global CSS variables"/"Button options" sections and its `.is-on`/`.is-off`
+state classes) drive this task:
+
+1. Every light/cover sub-button in `bottomButtons` already has
+   `state_background: true` set (unchanged since Task 5) — Bubble Card
+   already colors these itself based on entity state, using its own
+   `--bubble-sub-button-background-color` variable and `.is-on`/`.is-off`
+   classes. Our hardcoded per-index honey/slate CSS
+   (`.bubble-sub-button-N { background: ...; color: ...; }`) was
+   overriding that native theming instead of complementing it. This task
+   REMOVES that per-index color CSS entirely — sub-buttons fall back to
+   Bubble Card's own default theming. This also means `idx`/the
+   sub-button CSS-index tracking in `buildRoomStyles` is no longer needed
+   at all (bottomButtons themselves are still built the same way, just
+   without generating any accompanying CSS for them).
+
+2. For the main card's background/icon/text colors, replace the hardcoded
+   hex/rgba constants with CSS custom properties: Bubble Card's own
+   `--bubble-main-background-color`, `--bubble-icon-background-color`,
+   `--bubble-accent-color`, combined via `color-mix()` with Home
+   Assistant's global `--card-background-color`/`--primary-text-color`/
+   `--secondary-text-color` for the neutral/inactive look. This makes the
+   card automatically match the user's actual theme (including dark
+   themes) instead of a fixed purple palette.
+
+**Files:**
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/src/styles.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/test/styles.test.js`
+- Modify: `/Users/davidebertolotti/Downloads/bubble-rooms-card/dist/styles.js` (mirror src, no build step)
+
+**Interfaces:**
+- `buildRoomStyles(hass, entityId, areaId, excludeEntities)` keeps its
+  existing signature and return shape `{ css: string, bottomButtons: Array<...> }`
+  (Task 5/6's contract — `room-config.js` and `bubble-rooms-card.js` are
+  unaffected by this task and need no changes).
+- `bottomButtons`'s shape is unchanged (still includes `state_background: true`
+  per entry) — only the CSS-generation side loses the per-index color rules.
+
+- [ ] **Step 1: Update the failing/changed tests first**
+
+Read the current `test/styles.test.js` (from Task 5) — replace the color
+assertions with the new variable-based ones. Replace the entire file with:
+
+```javascript
+// test/styles.test.js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { buildRoomStyles } from '../src/styles.js';
+
+function baseHass(overrides = {}) {
+  return {
+    entities: {
+      'light.sala_madia': { area_id: 'sala', device_id: null },
+      'cover.sala_tapparella': { area_id: 'sala', device_id: null },
+      ...(overrides.entities || {})
+    },
+    devices: {},
+    states: {
+      'binary_sensor.sala_motion': { state: 'on' },
+      'light.sala_madia': { state: 'off' },
+      'cover.sala_tapparella': { state: 'closed' },
+      ...(overrides.states || {})
+    }
+  };
+}
+
+test('active room uses a bubble-accent-tinted background and 0.45s transition', () => {
+  const hass = baseHass();
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /background: color-mix\(in srgb, var\(--bubble-main-background-color\) 20%, transparent\) !important/);
+  assert.match(css, /transition: background-color 0\.45s ease, color 0\.45s ease !important/);
+});
+
+test('inactive room uses a neutral card-background-color mix and 180s transition', () => {
+  const hass = baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } });
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /background: color-mix\(in srgb, var\(--card-background-color, #fff\) 40%, transparent\) !important/);
+  assert.match(css, /transition: background-color 180s linear, color 180s linear !important/);
+});
+
+test('active icon container uses the bubble-card icon background variable directly', () => {
+  const hass = baseHass();
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /\.bubble-icon-container \{\n {2}background: var\(--bubble-icon-background-color\) !important;/);
+});
+
+test('inactive icon container falls back to a neutral card-background-color mix', () => {
+  const hass = baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } });
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /\.bubble-icon-container \{\n {2}background: color-mix\(in srgb, var\(--card-background-color, #fff\) 55%, transparent\) !important;/);
+});
+
+test('.bubble-name follows the theme primary text color instead of a fixed hex', () => {
+  const hass = baseHass();
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.match(css, /\.bubble-name \{ color: var\(--primary-text-color\) !important; font-weight: 600 !important; letter-spacing: -0\.02em !important; \}/);
+});
+
+test('state text uses bubble-accent-color when active, secondary-text-color when inactive', () => {
+  const active = buildRoomStyles(baseHass(), 'binary_sensor.sala_motion', 'sala', []).css;
+  assert.match(active, /\.bubble-state, \.bubble-last-changed \{\n {2}color: var\(--bubble-accent-color\) !important;/);
+
+  const inactive = buildRoomStyles(
+    baseHass({ states: { 'binary_sensor.sala_motion': { state: 'off' } } }),
+    'binary_sensor.sala_motion', 'sala', []
+  ).css;
+  assert.match(inactive, /\.bubble-state, \.bubble-last-changed \{\n {2}color: var\(--secondary-text-color\) !important;/);
+});
+
+test('no per-index sub-button color CSS is generated (Bubble Card themes them natively)', () => {
+  const hass = baseHass({ states: { 'light.sala_madia': { state: 'on' } } });
+  const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);
+  assert.doesNotMatch(css, /\.bubble-sub-button-\d+/);
+});
+
+test('bottomButtons still lists lights before covers, with state_background true, excluding excludeEntities', () => {
+  const hass = baseHass();
+  const { bottomButtons } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', ['cover.sala_tapparella']);
+  assert.deepEqual(bottomButtons.map((b) => b.entity), ['light.sala_madia']);
+  assert.deepEqual(bottomButtons[0], {
+    entity: 'light.sala_madia',
+    state_background: true,
+    show_name: true,
+    show_state: false,
+    tap_action: { action: 'toggle' },
+    hold_action: { action: 'more-info' }
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npm test`
+Expected: FAIL — the new assertions don't match the current (Task 5)
+hardcoded-hex implementation.
+
+- [ ] **Step 3: Rewrite `src/styles.js`**
+
+```javascript
+// src/styles.js
+import { areaEntities } from './area-entities.js';
+
+export function buildRoomStyles(hass, entityId, areaId, excludeEntities) {
+  const attivo = hass.states[entityId] && hass.states[entityId].state === 'on';
+  const trans = attivo
+    ? 'background-color 0.45s ease, color 0.45s ease'
+    : 'background-color 180s linear, color 180s linear';
+  const cardBg = attivo
+    ? 'color-mix(in srgb, var(--bubble-main-background-color) 20%, transparent)'
+    : 'color-mix(in srgb, var(--card-background-color, #fff) 40%, transparent)';
+  const iconBg = attivo
+    ? 'var(--bubble-icon-background-color)'
+    : 'color-mix(in srgb, var(--card-background-color, #fff) 55%, transparent)';
+  const iconFg = attivo ? '#ffffff' : 'var(--secondary-text-color)';
+  const stateFg = attivo ? 'var(--bubble-accent-color)' : 'var(--secondary-text-color)';
+
+  const excluded = new Set(excludeEntities || []);
+  const lights = areaEntities(hass, areaId, 'light').filter((e) => !excluded.has(e));
+  const covers = areaEntities(hass, areaId, 'cover').filter((e) => !excluded.has(e));
+
+  const bottomButtons = [];
+  for (const light of lights) {
+    bottomButtons.push({
+      entity: light,
+      state_background: true,
+      show_name: true,
+      show_state: false,
+      tap_action: { action: 'toggle' },
+      hold_action: { action: 'more-info' }
+    });
+  }
+  for (const cover of covers) {
+    bottomButtons.push({
+      entity: cover,
+      state_background: true,
+      show_name: true,
+      show_state: false,
+      tap_action: { action: 'toggle' },
+      hold_action: { action: 'more-info' }
+    });
+  }
+
+  const css = (
+    'ha-card {\n' +
+    `  background: ${cardBg} !important;\n` +
+    '  -webkit-backdrop-filter: blur(20px) saturate(1.7); backdrop-filter: blur(20px) saturate(1.7);\n' +
+    '  border: 0.5px solid rgba(255,255,255,0.55) !important;\n' +
+    '  border-radius: 28px !important;\n' +
+    '  box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 10px 30px rgba(40,55,90,0.13), 0 1px 3px rgba(0,0,0,0.05) !important;\n' +
+    `  transition: ${trans} !important;\n` +
+    '}\n' +
+    '.bubble-icon-container {\n' +
+    `  background: ${iconBg} !important;\n` +
+    '  box-shadow: inset 0 1.5px 1px rgba(255,255,255,0.7), 0 2px 6px rgba(60,70,90,0.12) !important;\n' +
+    `  transition: ${trans} !important;\n` +
+    '}\n' +
+    `.bubble-icon { color: ${iconFg} !important; transition: ${trans} !important; }\n` +
+    '.bubble-name { color: var(--primary-text-color) !important; font-weight: 600 !important; letter-spacing: -0.02em !important; }\n' +
+    '.bubble-state, .bubble-last-changed {\n' +
+    `  color: ${stateFg} !important; font-weight: 500 !important;\n` +
+    `  transition: color ${attivo ? '0.45s' : '180s'} linear !important;\n` +
+    '}\n' +
+    '.bubble-sub-button {\n' +
+    '  border-radius: 999px !important;\n' +
+    '  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);\n' +
+    '  border: 0.5px solid rgba(255,255,255,0.5) !important;\n' +
+    '  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6) !important;\n' +
+    '}\n' +
+    '@media (prefers-reduced-motion: reduce) {\n' +
+    '  ha-card, .bubble-icon-container, .bubble-icon, .bubble-state, .bubble-last-changed { transition: none !important; }\n' +
+    '}\n'
+  );
+
+  return { css, bottomButtons };
+}
+```
+
+Note what's deliberately removed vs. Task 5's version: the `ns`/`idx`
+namespace, the per-light/per-cover CSS-class-generation loops, and the
+`subButtonCss` concatenation — bottomButtons are now built with two plain
+loops with no side CSS, since Bubble Card themes sub-buttons itself via
+`state_background: true`.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd /Users/davidebertolotti/Downloads/bubble-rooms-card && npm test`
+Expected: PASS, no failures.
+
+- [ ] **Step 5: Copy to `dist/` and verify**
+
+```bash
+cd /Users/davidebertolotti/Downloads/bubble-rooms-card
+cp src/styles.js dist/styles.js
+node --check src/styles.js
+node --check dist/styles.js
+diff src/styles.js dist/styles.js
+npm test
+```
+
+Expected: both `node --check` calls succeed, `diff` shows no output, all
+tests pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/styles.js test/styles.test.js dist/styles.js
+git commit -m "feat: follow Bubble Card/theme colors instead of a hardcoded palette"
+```
+
+- [ ] **Step 7: Push and tag a new release**
+
+```bash
+git push origin main
+git tag v0.4.0
+git push origin v0.4.0
+gh release create v0.4.0 --title "v0.4.0" --notes "Colors now follow Bubble Card's own theme variables and Home Assistant's global theme (light/dark aware) instead of a fixed palette. Light/cover sub-buttons rely on Bubble Card's native state_background theming instead of a hardcoded honey/slate palette."
+```
+
+- [ ] **Step 8: Manual verification (requires a live Home Assistant instance)**
+
+A human must confirm: after updating via HACS, room cards visually follow
+the current Home Assistant theme's accent/background colors instead of the
+old fixed purple/honey palette, and still show the glass-blur effect and
+the same 0.45s/180s transition timing when a room's motion state changes.
