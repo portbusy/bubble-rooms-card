@@ -115,10 +115,11 @@ const NATIVE_ROOM_STYLES = `
   display: none;
 }
 .brc-room__badge {
-  display: none;
+  display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 11px;
+  min-height: 24px;
+  margin-left: auto;
+  padding: 0 10px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
@@ -135,7 +136,7 @@ const NATIVE_ROOM_STYLES = `
   gap: 8px;
   min-height: 20px;
   align-items: center;
-  padding-right: 58px;
+  padding-right: 0;
   overflow: hidden;
 }
 .brc-room__presence {
@@ -166,6 +167,11 @@ const NATIVE_ROOM_STYLES = `
   background: transparent;
   color: var(--primary-text-color);
   cursor: pointer;
+}
+.brc-room__badge,
+.brc-room__metric,
+.brc-room__summary-pill {
+  flex: 0 0 auto;
 }
 .brc-room--active .brc-room__metric,
 .brc-room--active .brc-room__summary-pill {
@@ -443,11 +449,7 @@ class BubbleRoomsCard extends HTMLElement {
     state.textContent = room.motionActive ? 'Presenza rilevata' : room.active ? 'Dispositivi attivi' : 'A riposo';
     title.append(name, state);
 
-    const badge = document.createElement('div');
-    badge.className = 'brc-room__badge';
-    badge.textContent = room.lastChanged || (room.active ? 'attiva ora' : 'nessun movimento');
-
-    header.append(title, badge, iconWrap);
+    header.append(title, iconWrap);
     return header;
   }
 
@@ -468,6 +470,10 @@ class BubbleRoomsCard extends HTMLElement {
     if (meta.children.length === 1) {
       meta.appendChild(this._summaryPill(room.active ? 'mdi:motion-sensor' : 'mdi:check-circle-outline', room.active ? 'Attiva' : 'Tutto quieto', room, room.motion));
     }
+    const badge = document.createElement('div');
+    badge.className = 'brc-room__badge';
+    badge.textContent = room.lastChanged || (room.active ? 'attiva ora' : 'nessun movimento');
+    meta.appendChild(badge);
     return meta;
   }
 
