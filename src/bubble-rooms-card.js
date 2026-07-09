@@ -8,7 +8,7 @@ import { entityName, isActiveEntity, resolveNativeRooms } from './native-rooms.j
 const NATIVE_ROOM_STYLES = `
 .brc-native-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 .brc-room {
   --brc-color: #8f9bd8;
@@ -18,11 +18,11 @@ const NATIVE_ROOM_STYLES = `
   gap: 0;
   padding: 0;
   overflow: hidden;
-  border-radius: var(--ha-card-border-radius, 24px);
+  border-radius: var(--ha-card-border-radius, 20px);
   border: 1px solid color-mix(in srgb, var(--brc-color) 18%, var(--divider-color, rgba(0, 0, 0, 0.12)));
   background: var(--card-background-color, #ffffff);
   color: var(--primary-text-color);
-  box-shadow: var(--ha-card-box-shadow, 0 10px 28px rgba(0, 0, 0, 0.12));
+  box-shadow: var(--ha-card-box-shadow, 0 8px 22px rgba(0, 0, 0, 0.11));
   cursor: pointer;
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
@@ -41,9 +41,9 @@ const NATIVE_ROOM_STYLES = `
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 14px;
-  min-height: 118px;
-  padding: 18px 18px 20px;
+  gap: 10px;
+  min-height: 92px;
+  padding: 14px 16px 16px;
   color: var(--primary-text-color);
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--brc-color) 30%, var(--card-background-color, #ffffff)), color-mix(in srgb, var(--card-background-color, #ffffff) 82%, var(--brc-color)));
@@ -63,15 +63,15 @@ const NATIVE_ROOM_STYLES = `
 .brc-room__header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 12px;
+  gap: 10px;
   align-items: start;
 }
 .brc-room__icon {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 18px;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
   color: var(--brc-color);
   background: color-mix(in srgb, var(--brc-color) 14%, var(--card-background-color, #ffffff));
   filter: drop-shadow(0 8px 10px color-mix(in srgb, var(--brc-color) 20%, transparent));
@@ -81,14 +81,14 @@ const NATIVE_ROOM_STYLES = `
   background: color-mix(in srgb, var(--brc-fg) 80%, transparent);
 }
 .brc-room__icon ha-icon {
-  --mdc-icon-size: 34px;
+  --mdc-icon-size: 28px;
 }
 .brc-room__title {
   min-width: 0;
 }
 .brc-room__name {
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.15;
   white-space: nowrap;
@@ -96,18 +96,18 @@ const NATIVE_ROOM_STYLES = `
   text-overflow: ellipsis;
 }
 .brc-room__state {
-  margin-top: 6px;
-  font-size: 13px;
+  margin-top: 4px;
+  font-size: 12px;
   font-weight: 700;
   opacity: 0.82;
 }
 .brc-room__badge {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 13px;
+  min-height: 28px;
+  padding: 0 11px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   background: color-mix(in srgb, var(--card-background-color, #ffffff) 62%, transparent);
   color: var(--secondary-text-color);
@@ -119,8 +119,8 @@ const NATIVE_ROOM_STYLES = `
 .brc-room__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  min-height: 30px;
+  gap: 10px 12px;
+  min-height: 24px;
 }
 .brc-room__metric,
 .brc-room__summary-pill {
@@ -128,12 +128,12 @@ const NATIVE_ROOM_STYLES = `
   align-items: center;
   gap: 6px;
   min-width: 0;
-  min-height: 30px;
+  min-height: 24px;
   padding: 0 2px;
   border-radius: 999px;
   border: 0;
   font: inherit;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   background: transparent;
   color: var(--primary-text-color);
@@ -151,14 +151,14 @@ const NATIVE_ROOM_STYLES = `
 .brc-room__metric ha-icon,
 .brc-room__summary-pill ha-icon,
 .brc-control ha-icon {
-  --mdc-icon-size: 18px;
+  --mdc-icon-size: 16px;
 }
 .brc-room__controls {
-  padding: 16px 18px 18px;
+  padding: 12px 16px 14px;
   background: var(--card-background-color, #ffffff);
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 .brc-control {
   display: inline-flex;
@@ -166,16 +166,16 @@ const NATIVE_ROOM_STYLES = `
   justify-content: center;
   gap: 8px;
   min-width: 0;
-  height: 46px;
-  padding: 0 18px;
+  height: 38px;
+  padding: 0 13px;
   border: 1px solid color-mix(in srgb, var(--brc-color) 16%, var(--divider-color, rgba(0, 0, 0, 0.12)));
   border-radius: 999px;
   font: inherit;
-  font-size: 15px;
-  font-weight: 750;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--primary-text-color);
   background: color-mix(in srgb, var(--card-background-color, #ffffff) 82%, var(--brc-color));
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
   cursor: pointer;
 }
 .brc-control__label {
@@ -187,7 +187,7 @@ const NATIVE_ROOM_STYLES = `
   color: color-mix(in srgb, var(--brc-color) 72%, #111827);
   background: color-mix(in srgb, var(--brc-color) 18%, var(--card-background-color, #ffffff));
   border-color: transparent;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
 }
 .brc-room--active .brc-control {
   background: color-mix(in srgb, var(--brc-fg) 92%, var(--brc-color));
@@ -207,11 +207,11 @@ const NATIVE_ROOM_STYLES = `
 }
 @media (max-width: 520px) {
   .brc-room {
-    border-radius: 20px;
+    border-radius: 18px;
   }
   .brc-room__hero {
-    min-height: 112px;
-    padding: 16px;
+    min-height: 88px;
+    padding: 13px 14px 14px;
   }
   .brc-room__header {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -221,7 +221,10 @@ const NATIVE_ROOM_STYLES = `
     justify-self: start;
   }
   .brc-room__controls {
-    padding: 14px 16px 16px;
+    padding: 11px 14px 13px;
+  }
+  .brc-control {
+    height: 36px;
   }
 }
 `;
