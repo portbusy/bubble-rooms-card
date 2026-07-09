@@ -41,12 +41,14 @@ rooms:
     temperature: sensor.sala_temperatura
     humidity: sensor.sala_umidita
     illuminance: sensor.sala_lux
+    summary_action: more-info
     navigate: "#sala"
 ```
 
 If `rooms` contains at least one item, Bubble Rooms Card uses its native renderer
-and ignores the legacy Bubble Card generation options. Each room can be configured
-from Home Assistant's visual editor using native area, entity, icon, boolean, and
+and ignores the legacy Bubble Card generation options. The visual editor now
+shows only this native room form. Each room can be configured from Home
+Assistant's visual editor using native area, entity, icon, boolean, select, and
 color selectors.
 
 | Room key | Default | Description |
@@ -63,10 +65,15 @@ color selectors.
 | `temperature` | none | Temperature sensor shown as a metric chip. |
 | `humidity` | none | Humidity sensor shown as a metric chip. |
 | `illuminance` | none | Illuminance sensor shown as a metric chip. |
+| `summary_action` | `more-info` | Action for metric and summary chips: `more-info`, `toggle`, `navigate`, or `none`. |
+| `summary_entity` | chip entity | Optional entity override for the summary action. |
+| `summary_navigation_path` | none | Navigation path used when `summary_action` is `navigate`. |
+| `summary_tap_action` | none | Advanced YAML action object. Example: `{action: toggle, entity_id: light.sala_madia}`. |
 | `navigate` | none | Optional dashboard path/hash when tapping the room card. Without it, tapping opens more-info for `motion`. |
 
-Right click / long context menu on a control opens more-info; normal tap toggles
-the entity through `homeassistant.toggle`.
+Metric and summary chips are secondary actions and default to more-info. Right
+click / long context menu on a chip or control opens more-info; normal tap on a
+control toggles the entity through `homeassistant.toggle`.
 
 ### Legacy label mode
 

@@ -4,6 +4,7 @@ import {
   foregroundForColor,
   isActiveEntity,
   relativeTime,
+  resolveRoomAction,
   resolveNativeRoom
 } from '../src/native-rooms.js';
 
@@ -58,11 +59,28 @@ test('resolveNativeRoom uses native area data and auto-discovers area entities',
   assert.equal(room.icon, 'mdi:sofa');
   assert.equal(room.motionActive, true);
   assert.equal(room.active, true);
+  assert.deepEqual(room.summaryTapAction, { action: 'more-info' });
   assert.deepEqual(room.lights, ['light.sala_madia', 'light.sala_tavolo']);
   assert.deepEqual(room.covers, ['cover.tapparella_sala']);
   assert.deepEqual(room.activeLights, ['light.sala_madia']);
   assert.deepEqual(room.activeCovers, ['cover.tapparella_sala']);
   assert.deepEqual(room.metrics.map((metric) => metric.value), ['21.4°C', '42%']);
+});
+
+test('summary action supports simple form fields and advanced tap action objects', () => {
+  assert.deepEqual(
+    resolveRoomAction({
+      summary_action: 'navigate',
+      summary_navigation_path: '#sala'
+    }, 'summary_tap_action'),
+    { action: 'navigate', entity: undefined, navigation_path: '#sala' }
+  );
+  assert.deepEqual(
+    resolveRoomAction({
+      summary_tap_action: { action: 'toggle', entity_id: 'light.sala_madia' }
+    }, 'summary_tap_action'),
+    { action: 'toggle', entity_id: 'light.sala_madia' }
+  );
 });
 
 test('resolveNativeRoom supports explicit entities, custom color, and disabled auto discovery', () => {

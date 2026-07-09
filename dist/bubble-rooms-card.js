@@ -2,7 +2,7 @@
 import { resolveRooms } from './rooms.js';
 import { sortRooms } from './sort.js';
 import { buildRoomConfig } from './room-config.js';
-import { SORT_PRESETS, resolveSortSteps } from './sort-presets.js';
+import { resolveSortSteps } from './sort-presets.js';
 import { entityName, isActiveEntity, resolveNativeRooms } from './native-rooms.js';
 
 const NATIVE_ROOM_STYLES = `
@@ -115,17 +115,26 @@ const NATIVE_ROOM_STYLES = `
   align-items: center;
   gap: 6px;
   min-width: 0;
-  padding: 6px 9px;
+  min-height: 30px;
+  padding: 0 10px;
   border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brc-color) 28%, transparent);
+  font: inherit;
   font-size: 13px;
   font-weight: 650;
-  background: color-mix(in srgb, var(--secondary-background-color, #f1f2f6) 88%, transparent);
+  background: color-mix(in srgb, var(--card-background-color, #ffffff) 58%, transparent);
   color: var(--primary-text-color);
+  cursor: pointer;
 }
 .brc-room--active .brc-room__metric,
 .brc-room--active .brc-room__summary-pill {
-  background: color-mix(in srgb, var(--brc-fg) 18%, transparent);
+  border-color: color-mix(in srgb, var(--brc-fg) 28%, transparent);
+  background: color-mix(in srgb, var(--brc-fg) 15%, transparent);
   color: var(--brc-fg);
+}
+.brc-room__metric:hover,
+.brc-room__summary-pill:hover {
+  background: color-mix(in srgb, var(--brc-color) 16%, var(--card-background-color, #ffffff));
 }
 .brc-room__metric ha-icon,
 .brc-room__summary-pill ha-icon,
@@ -133,9 +142,15 @@ const NATIVE_ROOM_STYLES = `
   --mdc-icon-size: 18px;
 }
 .brc-room__controls {
+  padding: 10px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--secondary-background-color, #f1f2f6) 82%, transparent);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 8px;
+}
+.brc-room--active .brc-room__controls {
+  background: color-mix(in srgb, var(--brc-fg) 16%, transparent);
 }
 .brc-control {
   display: inline-flex;
@@ -145,13 +160,13 @@ const NATIVE_ROOM_STYLES = `
   min-width: 0;
   height: 42px;
   padding: 0 13px;
-  border: 0;
-  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brc-color) 18%, transparent);
+  border-radius: 16px;
   font: inherit;
   font-size: 14px;
   font-weight: 650;
   color: var(--primary-text-color);
-  background: color-mix(in srgb, var(--secondary-background-color, #f1f2f6) 92%, var(--brc-color));
+  background: var(--card-background-color, #ffffff);
   cursor: pointer;
 }
 .brc-control__label {
@@ -162,15 +177,17 @@ const NATIVE_ROOM_STYLES = `
 .brc-control--active {
   color: var(--brc-fg);
   background: var(--brc-color);
+  border-color: transparent;
   box-shadow: 0 8px 20px color-mix(in srgb, var(--brc-color) 28%, transparent);
 }
 .brc-room--active .brc-control {
-  background: color-mix(in srgb, var(--brc-fg) 18%, transparent);
-  color: var(--brc-fg);
+  background: color-mix(in srgb, var(--brc-fg) 88%, transparent);
+  color: var(--brc-color);
+  border-color: transparent;
 }
 .brc-room--active .brc-control--active {
-  background: color-mix(in srgb, var(--brc-fg) 92%, transparent);
-  color: var(--brc-color);
+  background: color-mix(in srgb, var(--brc-color) 82%, #111827);
+  color: var(--brc-fg);
 }
 @media (max-width: 520px) {
   .brc-room {
@@ -193,7 +210,7 @@ const NATIVE_ROOM_STYLES = `
 class BubbleRoomsCard extends HTMLElement {
   setConfig(config) {
     this._config = {
-      rooms: config.rooms || [],
+      rooms: config.rooms,
       label: config.label || 'gruppo_movimento_stanza',
       name_strip_prefix: config.name_strip_prefix || 'Sensori movimento ',
       exclude_entities: config.exclude_entities || [],
@@ -295,7 +312,7 @@ class BubbleRoomsCard extends HTMLElement {
   }
 
   _hasNativeRooms() {
-    return Array.isArray(this._config.rooms) && this._config.rooms.length > 0;
+    return Array.isArray(this._config.rooms);
   }
 
   _setMode(mode) {
@@ -383,30 +400,44 @@ class BubbleRoomsCard extends HTMLElement {
     meta.className = 'brc-room__meta';
 
     for (const metric of room.metrics) {
-      const chip = document.createElement('span');
+      const chip = this._summaryButton(metric.icon, metric.value, room, metric.entityId, metric.label);
       chip.className = 'brc-room__metric';
-      chip.title = metric.label;
-      chip.append(this._icon(metric.icon), document.createTextNode(metric.value));
       meta.appendChild(chip);
     }
 
     if (room.activeLights.length > 0) {
-      meta.appendChild(this._summaryPill('mdi:lightbulb-on', `${room.activeLights.length} luci`));
+      meta.appendChild(this._summaryPill('mdi:lightbulb-on', `${room.activeLights.length} luci`, room, room.activeLights));
     }
     if (room.activeCovers.length > 0) {
-      meta.appendChild(this._summaryPill('mdi:window-shutter-open', `${room.activeCovers.length} aperte`));
+      meta.appendChild(this._summaryPill('mdi:window-shutter-open', `${room.activeCovers.length} aperte`, room, room.activeCovers));
     }
     if (meta.children.length === 0) {
-      meta.appendChild(this._summaryPill(room.active ? 'mdi:motion-sensor' : 'mdi:check-circle-outline', room.active ? 'Attiva' : 'Tutto quieto'));
+      meta.appendChild(this._summaryPill(room.active ? 'mdi:motion-sensor' : 'mdi:check-circle-outline', room.active ? 'Attiva' : 'Tutto quieto', room, room.motion ? [room.motion] : []));
     }
     return meta;
   }
 
-  _summaryPill(icon, label) {
-    const pill = document.createElement('span');
+  _summaryPill(icon, label, room, entityIds = []) {
+    const pill = this._summaryButton(icon, label, room, entityIds[0], label);
     pill.className = 'brc-room__summary-pill';
-    pill.append(this._icon(icon), document.createTextNode(label));
     return pill;
+  }
+
+  _summaryButton(icon, label, room, fallbackEntityId, title) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.title = title || label;
+    button.append(this._icon(icon), document.createTextNode(label));
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this._runAction(room.summaryTapAction, fallbackEntityId);
+    });
+    button.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this._showMoreInfo(fallbackEntityId);
+    });
+    return button;
   }
 
   _createNativeControls(room) {
@@ -469,6 +500,25 @@ class BubbleRoomsCard extends HTMLElement {
     if (room.motion) this._showMoreInfo(room.motion);
   }
 
+  _runAction(actionConfig, fallbackEntityId) {
+    const action = actionConfig || { action: 'more-info' };
+    const entityId = action.entity || action.entity_id || fallbackEntityId;
+    if (action.action === 'none') return;
+    if (action.action === 'navigate') {
+      const path = action.navigation_path || action.path;
+      if (path) {
+        window.history.pushState(null, '', path);
+        window.dispatchEvent(new Event('location-changed'));
+      }
+      return;
+    }
+    if (action.action === 'toggle') {
+      this._toggleEntity(entityId);
+      return;
+    }
+    this._showMoreInfo(entityId);
+  }
+
   _toggleEntity(entityId) {
     if (!this._hass || !entityId) return;
     this._hass.callService('homeassistant', 'toggle', { entity_id: entityId });
@@ -486,15 +536,6 @@ class BubbleRoomsCard extends HTMLElement {
   static getStubConfig() {
     return {
       rooms: [],
-      label: 'gruppo_movimento_stanza',
-      name_strip_prefix: 'Sensori movimento ',
-      exclude_entities: [],
-      sort_preset: 'active_recent',
-      design: 'hero',
-      color_mode: 'auto',
-      show_summary: false,
-      room_links: {},
-      room_colors: {}
     };
   }
 
@@ -509,21 +550,30 @@ class BubbleRoomsCard extends HTMLElement {
               label_field: 'name',
               fields: {
                 name: { selector: { text: {} }, label: 'Nome' },
-                area: { selector: { area: {} }, label: 'Area' },
+                area: {
+                  selector: {
+                    area: {
+                      entity: {
+                        domain: ['binary_sensor', 'light', 'cover', 'sensor']
+                      }
+                    }
+                  },
+                  label: 'Area'
+                },
                 icon: { selector: { icon: {} }, label: 'Icona' },
                 color: { selector: { text: { type: 'color' } }, label: 'Colore stanza' },
                 foreground: { selector: { text: { type: 'color' } }, label: 'Colore testo' },
                 auto_entities: { selector: { boolean: {} }, label: 'Entità automatiche area' },
                 motion: {
-                  selector: { entity: { filter: { domain: 'binary_sensor' } } },
+                  selector: { entity: { filter: { domain: 'binary_sensor', device_class: ['motion', 'occupancy', 'presence'] } } },
                   label: 'Sensore movimento/presenza'
                 },
                 lights: {
-                  selector: { entity: { multiple: true, filter: { domain: 'light' } } },
+                  selector: { entity: { multiple: true, reorder: true, filter: { domain: 'light' } } },
                   label: 'Luci'
                 },
                 covers: {
-                  selector: { entity: { multiple: true, filter: { domain: 'cover' } } },
+                  selector: { entity: { multiple: true, reorder: true, filter: { domain: 'cover' } } },
                   label: 'Tapparelle e cover'
                 },
                 temperature: {
@@ -538,88 +588,43 @@ class BubbleRoomsCard extends HTMLElement {
                   selector: { entity: { filter: { domain: 'sensor' } } },
                   label: 'Illuminamento'
                 },
+                summary_action: {
+                  selector: {
+                    select: {
+                      mode: 'dropdown',
+                      options: [
+                        { value: 'more-info', label: 'More info' },
+                        { value: 'toggle', label: 'Toggle entità' },
+                        { value: 'navigate', label: 'Naviga' },
+                        { value: 'none', label: 'Nessuna azione' }
+                      ]
+                    }
+                  },
+                  label: 'Azione riepilogo'
+                },
+                summary_entity: {
+                  selector: { entity: {} },
+                  label: 'Entità riepilogo'
+                },
+                summary_navigation_path: {
+                  selector: { text: {} },
+                  label: 'Percorso riepilogo'
+                },
                 navigate: { selector: { text: {} }, label: 'Navigazione' }
               }
             }
           }
-        },
-        { name: 'label', selector: { label: {} } },
-        { name: 'name_strip_prefix', selector: { text: {} } },
-        { name: 'exclude_entities', selector: { entity: { multiple: true } } },
-        {
-          name: 'sort_preset',
-          selector: {
-            select: {
-              options: Object.entries(SORT_PRESETS).map(([value, preset]) => ({
-                value,
-                label: preset.label
-              }))
-            }
-          }
-        },
-        {
-          name: 'sort',
-          selector: { object: {} }
-        },
-        {
-          name: 'design',
-          selector: {
-            select: {
-              options: [
-                { value: 'hero', label: 'Hero' },
-                { value: 'soft', label: 'Soft' },
-                { value: 'minimal', label: 'Minimal' }
-              ]
-            }
-          }
-        },
-        {
-          name: 'color_mode',
-          selector: {
-            select: {
-              options: [
-                { value: 'auto', label: 'Automatici' },
-                { value: 'manual', label: 'Solo manuali' },
-                { value: 'off', label: 'Disattivati' }
-              ]
-            }
-          }
-        },
-        {
-          name: 'show_summary',
-          selector: { boolean: {} }
-        },
-        {
-          name: 'room_links',
-          selector: { object: {} }
-        },
-        {
-          name: 'room_colors',
-          selector: { object: {} }
         }
       ],
       computeLabel(schemaItem) {
         const labels = {
-          rooms: 'Stanze native',
-          label: 'Label',
-          name_strip_prefix: 'Name prefix to strip',
-          exclude_entities: 'Excluded entities',
-          sort_preset: 'Ordinamento',
-          sort: 'Ordinamento avanzato',
-          design: 'Design',
-          color_mode: 'Modalità colore',
-          show_summary: 'Mostra riepilogo',
-          room_links: 'Link stanze',
-          room_colors: 'Colori stanze'
+          rooms: 'Stanze'
         };
         return labels[schemaItem.name] || schemaItem.name;
       },
       computeHelper(schemaItem) {
         const helpers = {
-          rooms: 'Nuova modalità consigliata. Se configuri una o più stanze qui, la card usa il renderer nativo e non dipende da Bubble Card.',
-          sort: 'YAML opzionale per ordinamenti custom. Se impostato, ha precedenza su Ordinamento.',
-          room_links: 'Mappa YAML opzionale: area_id, entity_id o nome stanza -> percorso dashboard/hash.',
-          room_colors: 'Mappa YAML opzionale: area_id, entity_id o nome stanza -> colore oppure {color, foreground}.'
+          rooms: 'Configura le stanze con selector nativi Home Assistant. Le entità automatiche usano l’area scelta; i campi luci/cover servono solo per override manuali.'
         };
         return helpers[schemaItem.name];
       }

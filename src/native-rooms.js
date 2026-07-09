@@ -105,6 +105,22 @@ export function sensorMetric(hass, entityId, icon, label) {
   };
 }
 
+export function resolveRoomAction(roomConfig, key, fallback = { action: 'more-info' }) {
+  const explicit = roomConfig[key] || roomConfig[`${key}_action`];
+  if (explicit && typeof explicit === 'object') return explicit;
+  if (typeof explicit === 'string') return { action: explicit };
+
+  const legacyAction = roomConfig.summary_action;
+  if (key === 'summary_tap_action' && typeof legacyAction === 'string') {
+    return {
+      action: legacyAction,
+      entity: roomConfig.summary_entity || roomConfig.summary_entity_id,
+      navigation_path: roomConfig.summary_navigation_path || roomConfig.summary_navigate
+    };
+  }
+  return fallback;
+}
+
 export function resolveNativeRoom(hass, roomConfig, index = 0) {
   const areaId = roomConfig.area || roomConfig.area_id || '';
   const area = areaId && hass.areas ? hass.areas[areaId] : null;
@@ -139,6 +155,7 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
     motion,
     motionActive,
     active,
+    summaryTapAction: resolveRoomAction(roomConfig, 'summary_tap_action'),
     lastChanged: motionState ? relativeTime(motionState.last_changed || motionState.last_updated) : '',
     lights: resolvedLights,
     covers: resolvedCovers,
