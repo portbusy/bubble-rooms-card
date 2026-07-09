@@ -32,7 +32,7 @@ exclude_entities:
   - cover.tapparella_camera_sx
 design: hero
 color_mode: auto
-show_summary: true
+show_summary: false
 room_links:
   sala: "#sala"
 room_colors:
@@ -54,7 +54,7 @@ sort:
 | `exclude_entities` | `[]` | Entity IDs excluded from the light/cover sub-buttons. |
 | `design` | `hero` | Visual preset: `hero`, `soft`, or `minimal`. |
 | `color_mode` | `auto` | Color behavior: `auto` assigns a warm room color, `manual` only uses `room_colors`, `off` keeps a neutral Bubble Card look. |
-| `show_summary` | `true` | Shows compact summary chips for active lights/covers in the room header. |
+| `show_summary` | `false` | Experimental: shows compact summary chips for active lights/covers when Bubble Card renders the main sub-button slot reliably. |
 | `room_links` | `{}` | Optional tap target per room. Keys can be the motion sensor `entity_id`, the `area_id`, or the displayed room name; values are dashboard paths or hashes like `#sala`. |
 | `room_colors` | `{}` | Optional color per room. Keys can be the motion sensor `entity_id`, the `area_id`, or the displayed room name. Values can be a CSS color string or `{color, foreground}`. Explicit colors override the automatic palette and are applied through Bubble Card variables for that room only. |
 | `sort_preset` | `active_recent` | Named sort preset chosen from the visual editor's dropdown: `active_recent`, `recent`, `active`, or `none`. Ignored if `sort` is also set. |

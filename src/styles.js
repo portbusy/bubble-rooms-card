@@ -42,25 +42,35 @@ export function buildRoomStyles(hass, entityId, areaId, excludeEntities, roomCol
   const trans = attivo
     ? 'background-color 0.45s ease, color 0.45s ease'
     : 'background-color 180s linear, color 180s linear';
-  const cardBg = 'var(--bubble-room-card-background, var(--bubble-main-background-color, var(--card-background-color, #fff)))';
-  const iconBg = 'var(--bubble-icon-background-color, var(--bubble-secondary-background-color, var(--card-background-color, #fff)))';
   const hasRoomColor = !!(roomColor && roomColor.color);
   const roomForeground = hasRoomColor
     ? (roomColor.foreground || '#ffffff')
     : null;
+  const roomBase = hasRoomColor ? roomColor.color : 'var(--bubble-accent-color, var(--primary-color, #6b7cff))';
+  const neutralBg = 'var(--bubble-main-background-color, var(--card-background-color, #fff))';
+  const activeCardBg = design === 'minimal'
+    ? `color-mix(in srgb, ${roomBase} 22%, ${neutralBg})`
+    : `linear-gradient(135deg, color-mix(in srgb, ${roomBase} 86%, ${neutralBg}) 0%, color-mix(in srgb, ${roomBase} 58%, ${neutralBg}) 42%, color-mix(in srgb, ${neutralBg} 88%, ${roomBase}) 100%)`;
+  const inactiveCardBg = design === 'hero'
+    ? `linear-gradient(135deg, color-mix(in srgb, ${neutralBg} 92%, ${roomBase}) 0%, ${neutralBg} 100%)`
+    : neutralBg;
+  const cardBg = attivo ? activeCardBg : inactiveCardBg;
+  const iconBg = attivo
+    ? `color-mix(in srgb, ${roomBase} 72%, #ffffff)`
+    : 'var(--bubble-icon-background-color, var(--bubble-secondary-background-color, var(--card-background-color, #fff)))';
   const iconFg = hasRoomColor
-    ? 'var(--bubble-room-foreground-color, #ffffff)'
+    ? (attivo ? 'var(--bubble-room-foreground-color, #ffffff)' : `color-mix(in srgb, ${roomBase} 78%, var(--secondary-text-color))`)
     : (attivo ? 'var(--bubble-accent-color)' : 'var(--secondary-text-color)');
-  const nameFg = hasRoomColor ? 'var(--bubble-room-foreground-color, #ffffff)' : 'var(--primary-text-color)';
+  const nameFg = hasRoomColor && attivo ? 'var(--bubble-room-foreground-color, #ffffff)' : 'var(--primary-text-color)';
   const stateFg = hasRoomColor
-    ? 'var(--bubble-room-foreground-color, #ffffff)'
+    ? (attivo ? 'var(--bubble-room-foreground-color, #ffffff)' : `color-mix(in srgb, ${roomBase} 78%, var(--secondary-text-color))`)
     : (attivo ? 'var(--bubble-accent-color)' : 'var(--secondary-text-color)');
   const roomColorVars = hasRoomColor
     ? (
       `  --bubble-room-color: ${roomColor.color};\n` +
       `  --bubble-room-foreground-color: ${roomForeground};\n` +
-      '  --bubble-room-card-background: linear-gradient(180deg, color-mix(in srgb, var(--bubble-room-color) 82%, var(--card-background-color, #fff)) 0%, color-mix(in srgb, var(--bubble-room-color) 58%, var(--card-background-color, #fff)) 44%, color-mix(in srgb, var(--card-background-color, #fff) 92%, var(--bubble-room-color)) 44%, var(--card-background-color, #fff) 100%);\n' +
-      '  --bubble-icon-background-color: color-mix(in srgb, var(--bubble-room-color) 74%, #ffffff);\n' +
+      `  --bubble-room-card-background: ${cardBg};\n` +
+      `  --bubble-icon-background-color: ${iconBg};\n` +
       '  --bubble-accent-color: var(--bubble-room-foreground-color);\n'
     )
     : '';
@@ -98,19 +108,22 @@ export function buildRoomStyles(hass, entityId, areaId, excludeEntities, roomCol
     `  --bubble-rooms-design: ${design};\n` +
     `  background: ${cardBg} !important;\n` +
     '  position: relative !important;\n' +
-    '  border: var(--bubble-border, 1px solid color-mix(in srgb, var(--bubble-room-color, var(--divider-color, transparent)) 26%, transparent)) !important;\n' +
+    `  border: ${attivo ? `1px solid color-mix(in srgb, ${roomBase} 55%, transparent)` : `1px solid color-mix(in srgb, ${roomBase} 22%, transparent)`} !important;\n` +
     `  border-radius: var(--bubble-border-radius, ${design === 'minimal' ? '20px' : '28px'}) !important;\n` +
-    `  box-shadow: var(--bubble-box-shadow, ${design === 'minimal' ? '0 1px 5px rgba(15, 23, 42, 0.10)' : '0 18px 38px color-mix(in srgb, var(--bubble-room-color, #1f2937) 22%, transparent), 0 2px 7px rgba(15, 23, 42, 0.13)'}) !important;\n` +
+    `  box-shadow: ${attivo ? `0 18px 42px color-mix(in srgb, ${roomBase} 32%, transparent), 0 2px 7px rgba(15, 23, 42, 0.13)` : `0 10px 28px rgba(15, 23, 42, 0.13), 0 1px 4px rgba(15, 23, 42, 0.08)`} !important;\n` +
     '  overflow: hidden !important;\n' +
     `  transition: ${trans} !important;\n` +
+    '}\n' +
+    '.bubble-button-card-container, .bubble-button-card, .bubble-card-container {\n' +
+    `  background: transparent !important;\n` +
     '}\n' +
     'ha-card::before {\n' +
     '  content: "";\n' +
     '  position: absolute;\n' +
     '  inset: 0;\n' +
     '  pointer-events: none;\n' +
-    `  opacity: ${design === 'minimal' ? '0' : '1'};\n` +
-    '  background: radial-gradient(circle at 88% 20%, color-mix(in srgb, var(--bubble-room-foreground-color, #ffffff) 18%, transparent) 0%, transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.20), transparent 48%);\n' +
+    `  opacity: ${design === 'minimal' ? '0' : attivo ? '1' : '0.35'};\n` +
+    `  background: radial-gradient(circle at 88% 20%, color-mix(in srgb, ${attivo ? 'var(--bubble-room-foreground-color, #ffffff)' : roomBase} 20%, transparent) 0%, transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.20), transparent 48%);\n` +
     '}\n' +
     '.bubble-icon-container {\n' +
     `  background: ${iconBg} !important;\n` +
@@ -119,13 +132,13 @@ export function buildRoomStyles(hass, entityId, areaId, excludeEntities, roomCol
     `  transition: ${trans} !important;\n` +
     '}\n' +
     `.bubble-icon { color: ${iconFg} !important; transition: ${trans} !important; }\n` +
-    `.bubble-name { color: ${nameFg} !important; font-weight: 600 !important; letter-spacing: -0.02em !important; }\n` +
+    `.bubble-name { color: ${nameFg} !important; font-weight: 700 !important; letter-spacing: -0.02em !important; }\n` +
     '.bubble-state, .bubble-last-changed {\n' +
     `  color: ${stateFg} !important; font-weight: 500 !important;\n` +
     `  transition: color ${attivo ? '0.45s' : '180s'} linear !important;\n` +
     '}\n' +
     '.bubble-state {\n' +
-    '  background: color-mix(in srgb, var(--bubble-room-foreground-color, var(--secondary-background-color, #f3f4f6)) 18%, transparent) !important;\n' +
+    `  background: ${attivo ? 'color-mix(in srgb, var(--bubble-room-foreground-color, #ffffff) 22%, transparent)' : `color-mix(in srgb, ${roomBase} 12%, transparent)`} !important;\n` +
     '  border-radius: 999px !important;\n' +
     '  padding: 0.18em 0.58em !important;\n' +
     '  display: inline-flex !important;\n' +
@@ -141,7 +154,7 @@ export function buildRoomStyles(hass, entityId, areaId, excludeEntities, roomCol
     '  color: color-mix(in srgb, var(--bubble-room-foreground-color, var(--primary-text-color)) 80%, var(--primary-text-color)) !important;\n' +
     '}\n' +
     '.bubble-last-changed {\n' +
-    '  background: color-mix(in srgb, var(--bubble-room-foreground-color, var(--secondary-background-color, #f3f4f6)) 18%, transparent) !important;\n' +
+    `  background: ${attivo ? 'color-mix(in srgb, var(--bubble-room-foreground-color, #ffffff) 20%, transparent)' : 'color-mix(in srgb, var(--secondary-text-color) 12%, transparent)'} !important;\n` +
     '  border-radius: 999px !important;\n' +
     '  padding: 0.34em 0.72em !important;\n' +
     '  display: inline-flex !important;\n' +

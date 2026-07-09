@@ -34,16 +34,10 @@ test('buildRoomConfig produces a bubble-card config with stripped name and sub_b
     tap_action: { action: 'more-info' },
     hold_action: { action: 'more-info' }
   });
-  assert.match(config.styles, /background: var\(--bubble-room-card-background, var\(--bubble-main-background-color, var\(--card-background-color, #fff\)\)\)/);
+  assert.match(config.styles, /background: linear-gradient\(135deg, color-mix/);
+  assert.match(config.styles, /\.bubble-button-card-container, \.bubble-button-card, \.bubble-card-container/);
   assert.equal(config.sub_button.main[0].show_last_updated, true);
-  assert.deepEqual(config.sub_button.main[1], {
-    name: '1 luce accesa',
-    icon: 'mdi:lightbulb-on',
-    show_name: true,
-    show_state: false,
-    state_background: false,
-    tap_action: { action: 'none' }
-  });
+  assert.equal(config.sub_button.main.length, 1);
   assert.equal(config.sub_button.bottom.length, 1);
   assert.equal(config.sub_button.bottom_layout, 'inline');
 });
@@ -69,7 +63,8 @@ test('buildRoomConfig applies a room color matched by area id', () => {
 
   assert.match(config.styles, /--bubble-room-color: #b98270;/);
   assert.match(config.styles, /--bubble-room-foreground-color: #ffffff;/);
-  assert.match(config.styles, /--bubble-room-card-background: linear-gradient\(180deg, color-mix\(in srgb, var\(--bubble-room-color\) 82%, var\(--card-background-color, #fff\)\) 0%, color-mix\(in srgb, var\(--bubble-room-color\) 58%, var\(--card-background-color, #fff\)\) 44%, color-mix\(in srgb, var\(--card-background-color, #fff\) 92%, var\(--bubble-room-color\)\) 44%, var\(--card-background-color, #fff\) 100%\);/);
+  assert.match(config.styles, /--bubble-room-card-background: linear-gradient\(135deg, color-mix\(in srgb, #b98270 86%/);
+  assert.match(config.styles, /background: linear-gradient\(135deg, color-mix\(in srgb, #b98270 86%/);
 });
 
 test('buildRoomConfig can auto-assign a room color from the room name', () => {

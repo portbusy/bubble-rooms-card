@@ -14,7 +14,7 @@ class BubbleRoomsCard extends HTMLElement {
       sort_preset: config.sort_preset,
       design: config.design || 'hero',
       color_mode: config.color_mode || (config.auto_room_colors === false ? 'off' : 'auto'),
-      show_summary: config.show_summary !== false,
+      show_summary: config.show_summary === true,
       room_links: config.room_links || {},
       room_colors: config.room_colors || {},
       auto_room_colors: config.auto_room_colors !== false
@@ -109,7 +109,7 @@ class BubbleRoomsCard extends HTMLElement {
       sort_preset: 'active_recent',
       design: 'hero',
       color_mode: 'auto',
-      show_summary: true,
+      show_summary: false,
       room_links: {},
       room_colors: {}
     };

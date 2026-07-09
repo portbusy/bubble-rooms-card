@@ -130,7 +130,7 @@ export function buildRoomConfig(hass, entityId, areaId, options) {
     roomColor,
     {
       design: options.design || 'hero',
-      showSummary: options.showSummary !== false
+      showSummary: options.showSummary === true
     }
   );
   const tapAction = roomLink
