@@ -142,6 +142,11 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
   const resolvedCovers = covers.length || !autoEntities ? covers : areaEntities(hass, areaId, 'cover');
   const motion = roomConfig.motion || roomConfig.motion_sensor || roomConfig.presence || null;
   const windowEntity = roomConfig.window || roomConfig.window_sensor || roomConfig.opening_sensor || null;
+  const automationEntity = firstConfiguredEntity(roomConfig, [
+    'automation',
+    'automation_control',
+    'automation_entity'
+  ]);
   const color = safeCssColor(roomConfig.color) || colorForRoom(areaId, name, index) || DEFAULT_COLOR;
   const foreground = safeCssColor(roomConfig.foreground) || foregroundForColor(color);
   const activeLights = resolvedLights.filter((entityId) => isActiveEntity(hass, entityId));
@@ -149,6 +154,9 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
   const motionState = motion ? hass.states[motion] : null;
   const motionActive = motion ? isActiveEntity(hass, motion) : false;
   const windowActive = windowEntity ? isActiveEntity(hass, windowEntity) : false;
+  const automationActive = automationEntity ? isActiveEntity(hass, automationEntity) : false;
+  const statusEntity = automationEntity || motion;
+  const statusActive = automationEntity ? automationActive : motionActive;
   const active = motionActive || activeLights.length > 0 || activeCovers.length > 0;
   const lightsSummaryEntity = firstConfiguredEntity(roomConfig, [
     'lights_summary_entity',
@@ -195,9 +203,17 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
     motionActive,
     windowEntity,
     windowActive,
+    automationEntity,
+    automationActive,
+    statusEntity,
+    statusActive,
     active,
     cardTapAction: resolveRoomAction(roomConfig, 'card_tap_action', cardDefaultAction),
-    statusTapAction: resolveRoomAction(roomConfig, 'status_tap_action', summaryTapAction),
+    statusTapAction: resolveRoomAction(
+      roomConfig,
+      'status_tap_action',
+      automationEntity ? { action: 'toggle' } : summaryTapAction
+    ),
     windowTapAction: resolveRoomAction(roomConfig, 'window_tap_action', summaryTapAction),
     lightsTapAction: resolveRoomAction(roomConfig, 'lights_tap_action', { action: 'toggle' }),
     coversTapAction: resolveRoomAction(roomConfig, 'covers_tap_action', { action: 'more-info' }),

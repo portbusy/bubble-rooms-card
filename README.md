@@ -33,6 +33,7 @@ rooms:
     icon: mdi:sofa
     color: "#b98270"
     motion: binary_sensor.sala_motion
+    automation: input_boolean.automazioni_sala
     window: binary_sensor.finestra_sala
     show_last_changed: true
     lights:
@@ -75,6 +76,7 @@ area from their device.
 | `foreground` | automatic contrast | Optional text color for active cards. |
 | `auto_entities` | `true` | When enabled, missing `lights` and `covers` are discovered from the selected area. |
 | `motion` | none | Motion/presence binary sensor. Drives the presence dot and the last-changed badge. |
+| `automation` | none | Optional `input_boolean` that drives the `Accesso` chip and toggles room automations on tap. Aliases: `automation_control`, `automation_entity`. It is intentionally not area-filtered because helpers are often global. |
 | `show_last_changed` | `true` | Shows the relative-time badge, such as `7 ore fa`, when `motion` is configured. |
 | `window` | none | Optional window/opening binary sensor. Renders a dedicated icon in the metric row and never reuses the cover state. Aliases: `window_sensor`, `opening_sensor`. |
 | `lights` | area lights | Light entities rendered as controls. The default tap action toggles the touched entity. |

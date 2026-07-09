@@ -522,15 +522,22 @@ class BubbleRoomsCard extends HTMLElement {
   _createRoomStatusControl(room) {
     const control = document.createElement('button');
     control.type = 'button';
-    control.className = `brc-control brc-control--status${room.motionActive ? ' brc-control--active' : ''}`;
-    control.title = room.motionActive ? 'Presenza rilevata' : 'Stanza a riposo';
+    control.className = `brc-control brc-control--status${room.statusActive ? ' brc-control--active' : ''}`;
+    control.title = room.automationEntity
+      ? (room.automationActive ? 'Automazioni abilitate' : 'Automazioni disabilitate')
+      : room.motionActive ? 'Presenza rilevata' : 'Stanza a riposo';
     control.append(
       this._icon(room.icon),
       this._controlText('Accesso')
     );
     control.addEventListener('click', (event) => {
       event.stopPropagation();
-      this._runAction(room.statusTapAction, room.motion);
+      this._runAction(room.statusTapAction, room.statusEntity);
+    });
+    control.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this._showMoreInfo(room.statusEntity);
     });
     return control;
   }

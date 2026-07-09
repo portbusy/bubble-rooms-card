@@ -28,6 +28,10 @@ const hass = {
       state: 'on',
       attributes: { friendly_name: 'Finestra sala', device_class: 'window' }
     },
+    'input_boolean.automazioni_sala': {
+      state: 'on',
+      attributes: { friendly_name: 'Automazioni sala' }
+    },
     'light.sala_madia': {
       state: 'on',
       attributes: { friendly_name: 'Luce madia' }
@@ -130,6 +134,20 @@ test('resolveNativeRoom keeps the window separate and resolves per-chip tap acti
   assert.deepEqual(room.metrics[0].tapAction, { action: 'navigate', navigation_path: '#clima' });
   assert.deepEqual(room.lightsTapAction, { action: 'more-info' });
   assert.deepEqual(room.coversTapAction, { action: 'toggle' });
+});
+
+test('resolveNativeRoom uses an input boolean as the automation status control', () => {
+  const room = resolveNativeRoom(hass, {
+    area: 'sala',
+    motion: 'binary_sensor.sala_motion',
+    automation: 'input_boolean.automazioni_sala'
+  });
+
+  assert.equal(room.automationEntity, 'input_boolean.automazioni_sala');
+  assert.equal(room.automationActive, true);
+  assert.equal(room.statusEntity, 'input_boolean.automazioni_sala');
+  assert.equal(room.statusActive, true);
+  assert.deepEqual(room.statusTapAction, { action: 'toggle' });
 });
 
 test('resolveNativeRoom supports explicit entities, custom color, and disabled auto discovery', () => {

@@ -73,7 +73,7 @@ function entityField(hass, areaId, name, label, options = {}) {
   };
 }
 
-function tapActionsField() {
+function tapActionsField(hasAutomationControl) {
   return {
     name: 'tap_actions',
     label: 'Azioni al tocco',
@@ -88,8 +88,12 @@ function tapActionsField() {
           },
           status: {
             label: 'Chip Accesso',
-            description: "Tocco sulla prima chip con l'icona della stanza.",
-            selector: nativeTapActionSelector({ action: 'more-info' })
+            description: hasAutomationControl
+              ? "Predefinita: toggle dell'input boolean automazioni."
+              : "Tocco sulla prima chip con l'icona della stanza.",
+            selector: nativeTapActionSelector(
+              hasAutomationControl ? { action: 'toggle' } : { action: 'more-info' }
+            )
           },
           window: {
             label: 'Indicatore finestra',
@@ -169,6 +173,10 @@ export function roomEditorSchema(hass, room = {}) {
           default: true,
           selector: { boolean: {} }
         },
+        entityField(hass, '', 'automation', 'Input boolean automazioni', {
+          domains: 'input_boolean',
+          description: 'Controlla la chip Accesso. Gli input boolean sono helper globali e restano selezionabili.'
+        }),
         entityField(hass, areaId, 'motion', 'Sensore movimento o presenza', {
           domains: 'binary_sensor',
           deviceClasses: ['motion', 'occupancy', 'presence'],
@@ -216,7 +224,7 @@ export function roomEditorSchema(hass, room = {}) {
       name: 'actions',
       title: 'Azioni',
       flatten: true,
-      schema: [tapActionsField()]
+      schema: [tapActionsField(Boolean(room.automation || room.automation_control || room.automation_entity))]
     }
   ];
 }
@@ -293,7 +301,8 @@ export class BubbleRoomsCardEditor extends BaseHTMLElement {
       const rooms = this._config.rooms.map((current, roomIndex) => (
         roomIndex === index ? nextRoom : current
       ));
-      this._setConfig({ ...this._config, rooms }, nextRoom.area !== room.area);
+      const mustRerender = nextRoom.area !== room.area || nextRoom.automation !== room.automation;
+      this._setConfig({ ...this._config, rooms }, mustRerender);
     });
 
     section.append(header, form);
