@@ -105,6 +105,10 @@ export function sensorMetric(hass, entityId, icon, label) {
   };
 }
 
+function firstConfiguredEntity(roomConfig, keys) {
+  return keys.map((key) => roomConfig[key]).find(Boolean) || null;
+}
+
 export function resolveRoomAction(roomConfig, key, fallback = { action: 'more-info' }) {
   const explicit = roomConfig[key] || roomConfig[`${key}_action`];
   if (explicit && typeof explicit === 'object') return explicit;
@@ -144,6 +148,18 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
   const motionState = motion ? hass.states[motion] : null;
   const motionActive = motion ? isActiveEntity(hass, motion) : false;
   const active = motionActive || activeLights.length > 0 || activeCovers.length > 0;
+  const lightsSummaryEntity = firstConfiguredEntity(roomConfig, [
+    'lights_summary_entity',
+    'light_summary_entity',
+    'lights_group',
+    'light_group'
+  ]);
+  const coversSummaryEntity = firstConfiguredEntity(roomConfig, [
+    'covers_summary_entity',
+    'cover_summary_entity',
+    'covers_group',
+    'cover_group'
+  ]);
 
   return {
     areaId,
@@ -159,6 +175,8 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
     lastChanged: motionState ? relativeTime(motionState.last_changed || motionState.last_updated) : '',
     lights: resolvedLights,
     covers: resolvedCovers,
+    lightsSummaryEntity,
+    coversSummaryEntity,
     metrics,
     activeLights,
     activeCovers

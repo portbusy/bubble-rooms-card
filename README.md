@@ -36,8 +36,10 @@ rooms:
     lights:
       - light.luce_madia
       - light.interruttore_sala
+    lights_summary_entity: light.luci_sala
     covers:
       - cover.tapparella_sala
+    covers_summary_entity: group.tapparelle_sala
     temperature: sensor.sala_temperatura
     humidity: sensor.sala_umidita
     illuminance: sensor.sala_lux
@@ -61,7 +63,9 @@ color selectors.
 | `auto_entities` | `true` | When enabled, missing `lights` and `covers` are discovered from the selected area. |
 | `motion` | none | Motion/presence binary sensor. Drives the main active/resting state and last-changed badge. |
 | `lights` | area lights | Light entities rendered as direct toggle controls. |
+| `lights_summary_entity` | single active light | Optional aggregate entity opened/controlled by the lights summary chip, for example `light.luci_sala`. Aliases: `light_summary_entity`, `lights_group`, `light_group`. |
 | `covers` | area covers | Cover entities rendered as direct toggle controls. |
+| `covers_summary_entity` | single active cover | Optional aggregate entity opened/controlled by the covers summary chip, for example `group.tapparelle_sala`. Aliases: `cover_summary_entity`, `covers_group`, `cover_group`. |
 | `temperature` | none | Temperature sensor shown as a metric chip. |
 | `humidity` | none | Humidity sensor shown as a metric chip. |
 | `illuminance` | none | Illuminance sensor shown as a metric chip. |

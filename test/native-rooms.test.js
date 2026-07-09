@@ -32,6 +32,10 @@ const hass = {
       state: 'off',
       attributes: { friendly_name: 'Luce tavolo' }
     },
+    'light.luci_sala': {
+      state: 'on',
+      attributes: { friendly_name: 'Luci sala' }
+    },
     'cover.tapparella_sala': {
       state: 'open',
       attributes: { friendly_name: 'Tapparella sala' }
@@ -65,6 +69,21 @@ test('resolveNativeRoom uses native area data and auto-discovers area entities',
   assert.deepEqual(room.activeLights, ['light.sala_madia']);
   assert.deepEqual(room.activeCovers, ['cover.tapparella_sala']);
   assert.deepEqual(room.metrics.map((metric) => metric.value), ['21.4°C', '42%']);
+});
+
+test('resolveNativeRoom supports grouped summary entities for aggregate chips', () => {
+  const room = resolveNativeRoom(hass, {
+    area: 'sala',
+    lights: ['light.sala_madia', 'light.sala_tavolo'],
+    covers: ['cover.tapparella_sala'],
+    lights_summary_entity: 'light.luci_sala',
+    covers_summary_entity: 'group.tapparelle_sala'
+  });
+
+  assert.equal(room.lightsSummaryEntity, 'light.luci_sala');
+  assert.equal(room.coversSummaryEntity, 'group.tapparelle_sala');
+  assert.deepEqual(room.activeLights, ['light.sala_madia']);
+  assert.deepEqual(room.activeCovers, ['cover.tapparella_sala']);
 });
 
 test('summary action supports simple form fields and advanced tap action objects', () => {

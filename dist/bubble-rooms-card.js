@@ -427,19 +427,25 @@ class BubbleRoomsCard extends HTMLElement {
     }
 
     if (room.activeLights.length > 0) {
-      meta.appendChild(this._summaryPill('mdi:lightbulb-on', `${room.activeLights.length} luci`, room, room.activeLights));
+      meta.appendChild(this._summaryPill('mdi:lightbulb-on', `${room.activeLights.length} luci`, room, this._aggregateSummaryEntity(room.lightsSummaryEntity, room.activeLights)));
     }
     if (room.activeCovers.length > 0) {
-      meta.appendChild(this._summaryPill('mdi:window-shutter-open', `${room.activeCovers.length} aperte`, room, room.activeCovers));
+      meta.appendChild(this._summaryPill('mdi:window-shutter-open', `${room.activeCovers.length} aperte`, room, this._aggregateSummaryEntity(room.coversSummaryEntity, room.activeCovers)));
     }
     if (meta.children.length === 0) {
-      meta.appendChild(this._summaryPill(room.active ? 'mdi:motion-sensor' : 'mdi:check-circle-outline', room.active ? 'Attiva' : 'Tutto quieto', room, room.motion ? [room.motion] : []));
+      meta.appendChild(this._summaryPill(room.active ? 'mdi:motion-sensor' : 'mdi:check-circle-outline', room.active ? 'Attiva' : 'Tutto quieto', room, room.motion));
     }
     return meta;
   }
 
-  _summaryPill(icon, label, room, entityIds = []) {
-    const pill = this._summaryButton(icon, label, room, entityIds[0], label);
+  _aggregateSummaryEntity(configuredEntityId, activeEntityIds) {
+    if (configuredEntityId) return configuredEntityId;
+    if (activeEntityIds.length === 1) return activeEntityIds[0];
+    return activeEntityIds[0];
+  }
+
+  _summaryPill(icon, label, room, entityId) {
+    const pill = this._summaryButton(icon, label, room, entityId, label);
     pill.className = 'brc-room__summary-pill';
     return pill;
   }
@@ -626,9 +632,17 @@ class BubbleRoomsCard extends HTMLElement {
                   selector: { entity: { multiple: true, reorder: true, filter: { domain: 'light' } } },
                   label: 'Luci'
                 },
+                lights_summary_entity: {
+                  selector: { entity: { filter: { domain: ['light', 'group'] } } },
+                  label: 'Entità riepilogo luci'
+                },
                 covers: {
                   selector: { entity: { multiple: true, reorder: true, filter: { domain: 'cover' } } },
                   label: 'Tapparelle e cover'
+                },
+                covers_summary_entity: {
+                  selector: { entity: { filter: { domain: ['cover', 'group'] } } },
+                  label: 'Entità riepilogo cover'
                 },
                 temperature: {
                   selector: { entity: { filter: { domain: 'sensor' } } },
