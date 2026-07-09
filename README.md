@@ -30,6 +30,11 @@ name_strip_prefix: "Sensori movimento "
 exclude_entities:
   - light.luci_sala
   - cover.tapparella_camera_sx
+design: hero
+color_mode: auto
+show_summary: true
+room_links:
+  sala: "#sala"
 room_colors:
   sala:
     color: "#b98270"
@@ -47,6 +52,10 @@ sort:
 | `label` | `gruppo_movimento_stanza` | Label applied to motion-sensor entities that should get a room card. |
 | `name_strip_prefix` | `"Sensori movimento "` | Prefix stripped from the sensor's friendly name to get the room name. |
 | `exclude_entities` | `[]` | Entity IDs excluded from the light/cover sub-buttons. |
-| `room_colors` | `{}` | Optional color per room. Keys can be the motion sensor `entity_id`, the `area_id`, or the displayed room name. Values can be a CSS color string or `{color, foreground}`. The color is applied through Bubble Card variables for that room only. |
+| `design` | `hero` | Visual preset: `hero`, `soft`, or `minimal`. |
+| `color_mode` | `auto` | Color behavior: `auto` assigns a warm room color, `manual` only uses `room_colors`, `off` keeps a neutral Bubble Card look. |
+| `show_summary` | `true` | Shows compact summary chips for active lights/covers in the room header. |
+| `room_links` | `{}` | Optional tap target per room. Keys can be the motion sensor `entity_id`, the `area_id`, or the displayed room name; values are dashboard paths or hashes like `#sala`. |
+| `room_colors` | `{}` | Optional color per room. Keys can be the motion sensor `entity_id`, the `area_id`, or the displayed room name. Values can be a CSS color string or `{color, foreground}`. Explicit colors override the automatic palette and are applied through Bubble Card variables for that room only. |
 | `sort_preset` | `active_recent` | Named sort preset chosen from the visual editor's dropdown: `active_recent`, `recent`, `active`, or `none`. Ignored if `sort` is also set. |
 | `sort` | `[{attribute: last_changed, reverse: true}, {attribute: state, reverse: true}]` | Chained sort steps (like Jinja's `sort()` filter chained calls — the *last* step is the primary key, earlier steps are tie-breakers). Each step: `attribute` (`state` or `last_changed`) and `reverse` (boolean). |

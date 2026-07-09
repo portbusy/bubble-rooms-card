@@ -12,7 +12,12 @@ class BubbleRoomsCard extends HTMLElement {
       exclude_entities: config.exclude_entities || [],
       sort: config.sort,
       sort_preset: config.sort_preset,
-      room_colors: config.room_colors || {}
+      design: config.design || 'hero',
+      color_mode: config.color_mode || (config.auto_room_colors === false ? 'off' : 'auto'),
+      show_summary: config.show_summary !== false,
+      room_links: config.room_links || {},
+      room_colors: config.room_colors || {},
+      auto_room_colors: config.auto_room_colors !== false
     };
     this._rooms = new Map(); // entityId -> { wrapper: HTMLElement, el: HTMLElement }
     if (!this._container) {
@@ -47,7 +52,12 @@ class BubbleRoomsCard extends HTMLElement {
       const config = buildRoomConfig(hass, entityId, areaId, {
         namePrefix: this._config.name_strip_prefix,
         excludeEntities: this._config.exclude_entities,
-        roomColors: this._config.room_colors
+        roomColors: this._config.room_colors,
+        autoRoomColors: this._config.auto_room_colors,
+        colorMode: this._config.color_mode,
+        design: this._config.design,
+        showSummary: this._config.show_summary,
+        roomLinks: this._config.room_links
       });
 
       let entry = this._rooms.get(entityId);
@@ -97,6 +107,10 @@ class BubbleRoomsCard extends HTMLElement {
       name_strip_prefix: 'Sensori movimento ',
       exclude_entities: [],
       sort_preset: 'active_recent',
+      design: 'hero',
+      color_mode: 'auto',
+      show_summary: true,
+      room_links: {},
       room_colors: {}
     };
   }
@@ -119,6 +133,42 @@ class BubbleRoomsCard extends HTMLElement {
           }
         },
         {
+          name: 'sort',
+          selector: { object: {} }
+        },
+        {
+          name: 'design',
+          selector: {
+            select: {
+              options: [
+                { value: 'hero', label: 'Hero' },
+                { value: 'soft', label: 'Soft' },
+                { value: 'minimal', label: 'Minimal' }
+              ]
+            }
+          }
+        },
+        {
+          name: 'color_mode',
+          selector: {
+            select: {
+              options: [
+                { value: 'auto', label: 'Automatici' },
+                { value: 'manual', label: 'Solo manuali' },
+                { value: 'off', label: 'Disattivati' }
+              ]
+            }
+          }
+        },
+        {
+          name: 'show_summary',
+          selector: { boolean: {} }
+        },
+        {
+          name: 'room_links',
+          selector: { object: {} }
+        },
+        {
           name: 'room_colors',
           selector: { object: {} }
         }
@@ -129,9 +179,22 @@ class BubbleRoomsCard extends HTMLElement {
           name_strip_prefix: 'Name prefix to strip',
           exclude_entities: 'Excluded entities',
           sort_preset: 'Ordinamento',
+          sort: 'Ordinamento avanzato',
+          design: 'Design',
+          color_mode: 'Modalità colore',
+          show_summary: 'Mostra riepilogo',
+          room_links: 'Link stanze',
           room_colors: 'Colori stanze'
         };
         return labels[schemaItem.name] || schemaItem.name;
+      },
+      computeHelper(schemaItem) {
+        const helpers = {
+          sort: 'YAML opzionale per ordinamenti custom. Se impostato, ha precedenza su Ordinamento.',
+          room_links: 'Mappa YAML opzionale: area_id, entity_id o nome stanza -> percorso dashboard/hash.',
+          room_colors: 'Mappa YAML opzionale: area_id, entity_id o nome stanza -> colore oppure {color, foreground}.'
+        };
+        return helpers[schemaItem.name];
       }
     };
   }
