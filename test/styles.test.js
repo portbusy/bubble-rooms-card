@@ -67,6 +67,24 @@ test('state text uses bubble-accent-color when active, secondary-text-color when
   assert.match(inactive, /\.bubble-state, \.bubble-last-changed \{\n {2}color: var\(--secondary-text-color\) !important;/);
 });
 
+test('room color overrides Bubble Card variables for a single card', () => {
+  const hass = baseHass();
+  const { css } = buildRoomStyles(
+    hass,
+    'binary_sensor.sala_motion',
+    'sala',
+    [],
+    { color: '#b98270', foreground: '#ffffff' }
+  );
+
+  assert.match(css, /--bubble-room-color: #b98270;/);
+  assert.match(css, /--bubble-room-foreground-color: #ffffff;/);
+  assert.match(css, /--bubble-main-background-color: color-mix\(in srgb, var\(--bubble-room-color\) 68%, var\(--card-background-color, #fff\)\);/);
+  assert.match(css, /--bubble-icon-background-color: color-mix\(in srgb, var\(--bubble-room-color\) 88%, var\(--card-background-color, #fff\)\);/);
+  assert.match(css, /\.bubble-name \{ color: var\(--bubble-room-foreground-color, #ffffff\) !important;/);
+  assert.match(css, /\.bubble-state, \.bubble-last-changed \{\n {2}color: var\(--bubble-room-foreground-color, #ffffff\) !important;/);
+});
+
 test('sub-buttons keep native Bubble Card state backgrounds and radius variable', () => {
   const hass = baseHass({ states: { 'light.sala_madia': { state: 'on' } } });
   const { css } = buildRoomStyles(hass, 'binary_sensor.sala_motion', 'sala', []);

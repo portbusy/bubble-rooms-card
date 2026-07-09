@@ -11,7 +11,8 @@ class BubbleRoomsCard extends HTMLElement {
       name_strip_prefix: config.name_strip_prefix || 'Sensori movimento ',
       exclude_entities: config.exclude_entities || [],
       sort: config.sort,
-      sort_preset: config.sort_preset
+      sort_preset: config.sort_preset,
+      room_colors: config.room_colors || {}
     };
     this._rooms = new Map(); // entityId -> { wrapper: HTMLElement, el: HTMLElement }
     if (!this._container) {
@@ -45,7 +46,8 @@ class BubbleRoomsCard extends HTMLElement {
       seen.add(entityId);
       const config = buildRoomConfig(hass, entityId, areaId, {
         namePrefix: this._config.name_strip_prefix,
-        excludeEntities: this._config.exclude_entities
+        excludeEntities: this._config.exclude_entities,
+        roomColors: this._config.room_colors
       });
 
       let entry = this._rooms.get(entityId);
@@ -94,7 +96,8 @@ class BubbleRoomsCard extends HTMLElement {
       label: 'gruppo_movimento_stanza',
       name_strip_prefix: 'Sensori movimento ',
       exclude_entities: [],
-      sort_preset: 'active_recent'
+      sort_preset: 'active_recent',
+      room_colors: {}
     };
   }
 
@@ -114,6 +117,10 @@ class BubbleRoomsCard extends HTMLElement {
               }))
             }
           }
+        },
+        {
+          name: 'room_colors',
+          selector: { object: {} }
         }
       ],
       computeLabel(schemaItem) {
@@ -121,7 +128,8 @@ class BubbleRoomsCard extends HTMLElement {
           label: 'Label',
           name_strip_prefix: 'Name prefix to strip',
           exclude_entities: 'Excluded entities',
-          sort_preset: 'Ordinamento'
+          sort_preset: 'Ordinamento',
+          room_colors: 'Colori stanze'
         };
         return labels[schemaItem.name] || schemaItem.name;
       }
