@@ -2,15 +2,15 @@
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=portbusy&repository=bubble-rooms-card&category=plugin)
 
-Custom Lovelace card for Home Assistant that renders one [Bubble Card](https://github.com/Clooos/Bubble-Card)
-button per room, auto-discovered from a label on motion-sensor entities.
-Unlike `auto-entities` + a Jinja template, this card keeps the same
-`bubble-card` DOM instances alive across state updates (no destroy/recreate),
-so there's no flash of unstyled content when any tracked entity changes.
+Custom Lovelace card for Home Assistant that renders beautiful room cards from
+native Home Assistant areas and entities. The recommended `rooms` mode does not
+depend on Bubble Card; the older label-based Bubble Card mode is still supported
+for existing dashboards.
 
 ## Requirements
 
-- [Bubble Card](https://github.com/Clooos/Bubble-Card) >= 3.2.3, installed via HACS.
+- Home Assistant 2026.7 or newer is the target baseline for the visual editor selectors.
+- [Bubble Card](https://github.com/Clooos/Bubble-Card) >= 3.2.3 is required only for the legacy label mode.
 
 ## Installation (HACS)
 
@@ -22,6 +22,53 @@ your own Home Assistant instance), or add manually:
 3. Install "Bubble Rooms Card", reload resources.
 
 ## Configuration
+
+### Native rooms mode (recommended)
+
+```yaml
+type: custom:bubble-rooms-card
+rooms:
+  - name: Sala
+    area: sala
+    icon: mdi:sofa
+    color: "#b98270"
+    motion: binary_sensor.sala_motion
+    lights:
+      - light.luce_madia
+      - light.interruttore_sala
+    covers:
+      - cover.tapparella_sala
+    temperature: sensor.sala_temperatura
+    humidity: sensor.sala_umidita
+    illuminance: sensor.sala_lux
+    navigate: "#sala"
+```
+
+If `rooms` contains at least one item, Bubble Rooms Card uses its native renderer
+and ignores the legacy Bubble Card generation options. Each room can be configured
+from Home Assistant's visual editor using native area, entity, icon, boolean, and
+color selectors.
+
+| Room key | Default | Description |
+|---|---|---|
+| `area` | required for auto-discovery | Home Assistant area id. Used for name/icon fallback and for automatic entity lookup. |
+| `name` | area name | Display name. |
+| `icon` | area icon or `mdi:home` | Main room icon. |
+| `color` | automatic room palette | Accent color for active state, controls, and card atmosphere. |
+| `foreground` | automatic contrast | Optional text color for active cards. |
+| `auto_entities` | `true` | When enabled, missing `lights` and `covers` are discovered from the selected area. |
+| `motion` | none | Motion/presence binary sensor. Drives the main active/resting state and last-changed badge. |
+| `lights` | area lights | Light entities rendered as direct toggle controls. |
+| `covers` | area covers | Cover entities rendered as direct toggle controls. |
+| `temperature` | none | Temperature sensor shown as a metric chip. |
+| `humidity` | none | Humidity sensor shown as a metric chip. |
+| `illuminance` | none | Illuminance sensor shown as a metric chip. |
+| `navigate` | none | Optional dashboard path/hash when tapping the room card. Without it, tapping opens more-info for `motion`. |
+
+Right click / long context menu on a control opens more-info; normal tap toggles
+the entity through `homeassistant.toggle`.
+
+### Legacy label mode
 
 ```yaml
 type: custom:bubble-rooms-card
