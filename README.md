@@ -33,6 +33,8 @@ rooms:
     icon: mdi:sofa
     color: "#b98270"
     motion: binary_sensor.sala_motion
+    window: binary_sensor.finestra_sala
+    show_last_changed: true
     lights:
       - light.luce_madia
       - light.interruttore_sala
@@ -43,8 +45,16 @@ rooms:
     temperature: sensor.sala_temperatura
     humidity: sensor.sala_umidita
     illuminance: sensor.sala_lux
-    summary_action: more-info
-    navigate: "#sala"
+    tap_actions:
+      card:
+        action: navigate
+        navigation_path: "#sala"
+      window:
+        action: more-info
+      lights:
+        action: toggle
+      covers:
+        action: more-info
 ```
 
 If `rooms` contains at least one item, Bubble Rooms Card uses its native renderer
@@ -61,23 +71,24 @@ color selectors.
 | `color` | automatic room palette | Accent color for active state, controls, and card atmosphere. |
 | `foreground` | automatic contrast | Optional text color for active cards. |
 | `auto_entities` | `true` | When enabled, missing `lights` and `covers` are discovered from the selected area. |
-| `motion` | none | Motion/presence binary sensor. Drives the main active/resting state and last-changed badge. |
-| `lights` | area lights | Light entities rendered as direct toggle controls. |
-| `lights_summary_entity` | single active light | Optional aggregate entity opened/controlled by the lights summary chip, for example `light.luci_sala`. Aliases: `light_summary_entity`, `lights_group`, `light_group`. |
-| `covers` | area covers | Cover entities rendered as direct toggle controls. |
-| `covers_summary_entity` | single active cover | Optional aggregate entity opened/controlled by the covers summary chip, for example `group.tapparelle_sala`. Aliases: `cover_summary_entity`, `covers_group`, `cover_group`. |
+| `motion` | none | Motion/presence binary sensor. Drives the presence dot and the last-changed badge. |
+| `show_last_changed` | `true` | Shows the relative-time badge, such as `7 ore fa`, when `motion` is configured. |
+| `window` | none | Optional window/opening binary sensor. Renders a dedicated icon in the metric row and never reuses the cover state. Aliases: `window_sensor`, `opening_sensor`. |
+| `lights` | area lights | Light entities rendered as controls. The default tap action toggles the touched entity. |
+| `lights_summary_entity` | touched light | Optional group target for every light-chip action, for example `light.luci_sala`. Aliases: `light_summary_entity`, `lights_group`, `light_group`. |
+| `covers` | area covers | Cover entities rendered as controls. The default tap action opens more-info for the touched entity. |
+| `covers_summary_entity` | touched cover | Optional group target for every cover-chip action, for example `group.tapparelle_sala`. Aliases: `cover_summary_entity`, `covers_group`, `cover_group`. |
 | `temperature` | none | Temperature sensor shown as a metric chip. |
 | `humidity` | none | Humidity sensor shown as a metric chip. |
 | `illuminance` | none | Illuminance sensor shown as a metric chip. |
-| `summary_action` | `more-info` | Action for metric and summary chips: `more-info`, `toggle`, `navigate`, or `none`. |
-| `summary_entity` | chip entity | Optional entity override for the summary action. |
-| `summary_navigation_path` | none | Navigation path used when `summary_action` is `navigate`. |
-| `summary_tap_action` | none | Advanced YAML action object. Example: `{action: toggle, entity_id: light.sala_madia}`. |
-| `navigate` | none | Optional dashboard path/hash when tapping the room card. Without it, tapping opens more-info for `motion`. |
+| `tap_actions` | defaults by chip | Object containing `card`, `status`, `window`, `temperature`, `humidity`, `illuminance`, `lights`, and `covers`. Each value accepts the native Home Assistant UI action format. |
 
-Metric and summary chips are secondary actions and default to more-info. Right
-click / long context menu on a chip or control opens more-info; normal tap on a
-control toggles the entity through `homeassistant.toggle`.
+The visual editor exposes the same actions through the native **Azioni al tocco**
+group: more-info, toggle, navigate, perform action, URL, or no action. Metric
+chips default to more-info; lights default to toggle; covers default to
+more-info. Legacy `summary_action`, `summary_entity`,
+`summary_navigation_path`, `summary_tap_action`, and `navigate` are still
+understood for existing YAML configurations.
 
 ### Legacy label mode
 

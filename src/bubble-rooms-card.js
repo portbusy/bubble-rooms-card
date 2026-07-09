@@ -94,6 +94,20 @@ const NATIVE_ROOM_STYLES = `
 .brc-room__state {
   display: none;
 }
+.brc-room__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--brc-fg) 20%, transparent);
+  color: var(--brc-fg);
+  flex: 0 0 auto;
+}
 .brc-room__meta {
   display: flex;
   flex-wrap: nowrap;
@@ -103,6 +117,13 @@ const NATIVE_ROOM_STYLES = `
   font-size: 13px;
   line-height: 20px;
   color: color-mix(in srgb, var(--brc-fg) 92%, transparent);
+}
+.brc-room__meta-content {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 8px;
   overflow: hidden;
 }
 .brc-room__presence {
@@ -227,6 +248,22 @@ const NATIVE_ROOM_STYLES = `
   }
 }
 `;
+
+function nativeTapActionSelector(defaultAction) {
+  return {
+    ui_action: {
+      default_action: defaultAction,
+      actions: [
+        { action: 'more-info' },
+        { action: 'toggle' },
+        { action: 'navigate' },
+        { action: 'perform-action' },
+        { action: 'url' },
+        { action: 'none' }
+      ]
+    }
+  };
+}
 
 class BubbleRoomsCard extends HTMLElement {
   setConfig(config) {
@@ -417,29 +454,47 @@ class BubbleRoomsCard extends HTMLElement {
   _createNativeMeta(room) {
     const meta = document.createElement('div');
     meta.className = 'brc-room__meta';
+
+    const content = document.createElement('div');
+    content.className = 'brc-room__meta-content';
+
     const presence = document.createElement('span');
     presence.className = 'brc-room__presence';
     presence.title = room.motionActive ? 'Presenza rilevata' : 'Nessuna presenza';
-    meta.appendChild(presence);
+    content.appendChild(presence);
 
-    if (room.covers.length) {
-      const coverTarget = room.coversSummaryEntity || room.covers[0];
-      const coverOpen = room.activeCovers.length > 0;
+    if (room.windowEntity) {
       const windowState = this._summaryButton(
-        coverOpen ? 'mdi:window-open-variant' : 'mdi:window-closed-variant',
+        room.windowActive ? 'mdi:window-open-variant' : 'mdi:window-closed-variant',
         '',
         room,
-        coverTarget,
-        coverOpen ? 'Apertura rilevata' : 'Aperture chiuse'
+        room.windowEntity,
+        room.windowActive ? 'Finestra aperta' : 'Finestra chiusa',
+        room.windowTapAction
       );
       windowState.className = 'brc-room__window';
-      meta.appendChild(windowState);
+      content.appendChild(windowState);
     }
 
     for (const metric of room.metrics) {
-      const chip = this._summaryButton(null, metric.value, room, metric.entityId, metric.label);
+      const chip = this._summaryButton(
+        null,
+        metric.value,
+        room,
+        metric.entityId,
+        metric.label,
+        metric.tapAction
+      );
       chip.className = 'brc-room__metric';
-      meta.appendChild(chip);
+      content.appendChild(chip);
+    }
+
+    meta.appendChild(content);
+    if (room.showLastChanged && room.lastChanged) {
+      const badge = document.createElement('div');
+      badge.className = 'brc-room__badge';
+      badge.textContent = room.lastChanged;
+      meta.appendChild(badge);
     }
     return meta;
   }
@@ -450,7 +505,7 @@ class BubbleRoomsCard extends HTMLElement {
     return pill;
   }
 
-  _summaryButton(icon, label, room, fallbackEntityId, title) {
+  _summaryButton(icon, label, room, fallbackEntityId, title, tapAction = room.summaryTapAction) {
     const button = document.createElement('button');
     button.type = 'button';
     button.title = title || label;
@@ -458,7 +513,7 @@ class BubbleRoomsCard extends HTMLElement {
     if (label) button.appendChild(document.createTextNode(label));
     button.addEventListener('click', (event) => {
       event.stopPropagation();
-      this._runAction(room.summaryTapAction, fallbackEntityId);
+      this._runAction(tapAction, fallbackEntityId);
     });
     button.addEventListener('contextmenu', (event) => {
       event.preventDefault();
@@ -490,7 +545,7 @@ class BubbleRoomsCard extends HTMLElement {
     );
     control.addEventListener('click', (event) => {
       event.stopPropagation();
-      this._activateRoom(room);
+      this._runAction(room.statusTapAction, room.motion);
     });
     return control;
   }
@@ -503,7 +558,7 @@ class BubbleRoomsCard extends HTMLElement {
     control.append(this._icon(this._entityIcon(entityId)), this._controlLabel(entityId, room));
     control.addEventListener('click', (event) => {
       event.stopPropagation();
-      this._toggleEntity(entityId);
+      this._runAction(this._entityTapAction(entityId, room), this._entityActionTarget(entityId, room));
     });
     control.addEventListener('contextmenu', (event) => {
       event.preventDefault();
@@ -517,6 +572,18 @@ class BubbleRoomsCard extends HTMLElement {
     if (entityId.startsWith('light.')) return 'brc-control--light';
     if (entityId.startsWith('cover.')) return 'brc-control--cover';
     return 'brc-control--entity';
+  }
+
+  _entityTapAction(entityId, room) {
+    if (entityId.startsWith('light.')) return room.lightsTapAction;
+    if (entityId.startsWith('cover.')) return room.coversTapAction;
+    return { action: 'more-info' };
+  }
+
+  _entityActionTarget(entityId, room) {
+    if (entityId.startsWith('light.')) return room.lightsSummaryEntity || entityId;
+    if (entityId.startsWith('cover.')) return room.coversSummaryEntity || entityId;
+    return entityId;
   }
 
   _controlLabel(entityId, room) {
@@ -559,12 +626,7 @@ class BubbleRoomsCard extends HTMLElement {
   }
 
   _activateRoom(room) {
-    if (room.navigate) {
-      window.history.pushState(null, '', room.navigate);
-      window.dispatchEvent(new Event('location-changed'));
-      return;
-    }
-    if (room.motion) this._showMoreInfo(room.motion);
+    this._runAction(room.cardTapAction, room.motion);
   }
 
   _runAction(actionConfig, fallbackEntityId) {
@@ -581,6 +643,22 @@ class BubbleRoomsCard extends HTMLElement {
     }
     if (action.action === 'toggle') {
       this._toggleEntity(entityId);
+      return;
+    }
+    if (action.action === 'url') {
+      const url = action.url_path || action.url;
+      if (url) {
+        if (action.new_tab) window.open(url, '_blank', 'noopener');
+        else window.location.assign(url);
+      }
+      return;
+    }
+    if (action.action === 'perform-action' || action.action === 'call-service') {
+      const service = action.perform_action || action.service;
+      const [domain, name] = String(service || '').split('.', 2);
+      if (domain && name && this._hass) {
+        this._hass.callService(domain, name, action.data || action.service_data || {}, action.target);
+      }
       return;
     }
     this._showMoreInfo(entityId);
@@ -625,67 +703,128 @@ class BubbleRoomsCard extends HTMLElement {
                       }
                     }
                   },
-                  label: 'Area'
+                  label: 'Area',
+                  description: 'Usata per il nome, l’icona e la scoperta automatica delle entità della stanza.'
                 },
                 icon: { selector: { icon: {} }, label: 'Icona' },
-                color: { selector: { text: { type: 'color' } }, label: 'Colore stanza' },
-                foreground: { selector: { text: { type: 'color' } }, label: 'Colore testo' },
-                auto_entities: { selector: { boolean: {} }, label: 'Entità automatiche area' },
+                color: {
+                  selector: { text: { type: 'color' } },
+                  label: 'Colore stanza',
+                  description: 'Definisce il gradiente della testata e l’accento delle chip.'
+                },
+                foreground: {
+                  selector: { text: { type: 'color' } },
+                  label: 'Colore testo',
+                  description: 'Lascia vuoto per scegliere automaticamente un colore leggibile.'
+                },
+                auto_entities: {
+                  selector: { boolean: {} },
+                  label: 'Trova automaticamente luci e tapparelle nell’area',
+                  description: 'Disattivalo solo quando vuoi usare le liste manuali qui sotto.',
+                  default: true
+                },
                 motion: {
                   selector: { entity: { filter: { domain: 'binary_sensor', device_class: ['motion', 'occupancy', 'presence'] } } },
-                  label: 'Sensore movimento/presenza'
+                  label: 'Sensore movimento o presenza',
+                  description: 'Alimenta il pallino di presenza e il badge dell’ultimo aggiornamento.'
+                },
+                show_last_changed: {
+                  selector: { boolean: {} },
+                  label: 'Mostra badge ultimo aggiornamento',
+                  description: 'Visualizza a destra “7 ore fa”, calcolato dal sensore movimento o presenza.',
+                  default: true
+                },
+                window: {
+                  selector: {
+                    entity: {
+                      filter: {
+                        domain: 'binary_sensor',
+                        device_class: ['window', 'door', 'opening', 'garage_door']
+                      }
+                    }
+                  },
+                  label: 'Sensore finestra o apertura',
+                  description: 'Opzionale. Mostra l’icona finestra nella riga sensori; non usa più le tapparelle.'
                 },
                 lights: {
                   selector: { entity: { multiple: true, reorder: true, filter: { domain: 'light' } } },
-                  label: 'Luci'
+                  label: 'Chip luci',
+                  description: 'Le luci mostrate nella fascia inferiore. Lascia vuoto con la scoperta automatica attiva.'
                 },
                 lights_summary_entity: {
                   selector: { entity: { filter: { domain: ['light', 'group'] } } },
-                  label: 'Entità riepilogo luci'
+                  label: 'Gruppo luci per il tocco',
+                  description: 'Opzionale. Diventa il target dell’azione delle chip luce, utile per controllare più luci insieme.'
                 },
                 covers: {
                   selector: { entity: { multiple: true, reorder: true, filter: { domain: 'cover' } } },
-                  label: 'Tapparelle e cover'
+                  label: 'Chip tapparelle e cover',
+                  description: 'Le cover mostrate nella fascia inferiore. Lascia vuoto con la scoperta automatica attiva.'
                 },
                 covers_summary_entity: {
                   selector: { entity: { filter: { domain: ['cover', 'group'] } } },
-                  label: 'Entità riepilogo cover'
+                  label: 'Gruppo tapparelle per il tocco',
+                  description: 'Opzionale. Diventa il target dell’azione delle chip tapparella, utile per controllarne più di una.'
                 },
                 temperature: {
                   selector: { entity: { filter: { domain: 'sensor' } } },
-                  label: 'Temperatura'
+                  label: 'Sensore temperatura'
                 },
                 humidity: {
                   selector: { entity: { filter: { domain: 'sensor' } } },
-                  label: 'Umidità'
+                  label: 'Sensore umidità'
                 },
                 illuminance: {
                   selector: { entity: { filter: { domain: 'sensor' } } },
-                  label: 'Illuminamento'
+                  label: 'Sensore illuminamento'
                 },
-                summary_action: {
+                tap_actions: {
                   selector: {
-                    select: {
-                      mode: 'dropdown',
-                      options: [
-                        { value: 'more-info', label: 'More info' },
-                        { value: 'toggle', label: 'Toggle entità' },
-                        { value: 'navigate', label: 'Naviga' },
-                        { value: 'none', label: 'Nessuna azione' }
-                      ]
+                    object: {
+                      fields: {
+                        card: {
+                          label: 'Testata della stanza',
+                          description: 'Tocco sullo spazio libero della card.',
+                          selector: nativeTapActionSelector({ action: 'more-info' })
+                        },
+                        status: {
+                          label: 'Chip Accesso',
+                          description: 'Tocco sulla prima chip con l’icona della stanza.',
+                          selector: nativeTapActionSelector({ action: 'more-info' })
+                        },
+                        window: {
+                          label: 'Indicatore finestra',
+                          description: 'Tocco sull’icona apertura nella riga sensori.',
+                          selector: nativeTapActionSelector({ action: 'more-info' })
+                        },
+                        temperature: {
+                          label: 'Temperatura',
+                          selector: nativeTapActionSelector({ action: 'more-info' })
+                        },
+                        humidity: {
+                          label: 'Umidità',
+                          selector: nativeTapActionSelector({ action: 'more-info' })
+                        },
+                        illuminance: {
+                          label: 'Illuminamento',
+                          selector: nativeTapActionSelector({ action: 'more-info' })
+                        },
+                        lights: {
+                          label: 'Chip luci',
+                          description: 'Predefinita: toggle dell’entità toccata.',
+                          selector: nativeTapActionSelector({ action: 'toggle' })
+                        },
+                        covers: {
+                          label: 'Chip tapparelle e cover',
+                          description: 'Predefinita: more-info dell’entità toccata.',
+                          selector: nativeTapActionSelector({ action: 'more-info' })
+                        }
+                      }
                     }
                   },
-                  label: 'Azione riepilogo'
-                },
-                summary_entity: {
-                  selector: { entity: {} },
-                  label: 'Entità riepilogo'
-                },
-                summary_navigation_path: {
-                  selector: { text: {} },
-                  label: 'Percorso riepilogo'
-                },
-                navigate: { selector: { text: {} }, label: 'Navigazione' }
+                  label: 'Azioni al tocco',
+                  description: 'Scegli qui un’azione nativa Home Assistant per ogni elemento interattivo della card.'
+                }
               }
             }
           }

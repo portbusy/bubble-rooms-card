@@ -110,7 +110,12 @@ function firstConfiguredEntity(roomConfig, keys) {
 }
 
 export function resolveRoomAction(roomConfig, key, fallback = { action: 'more-info' }) {
-  const explicit = roomConfig[key] || roomConfig[`${key}_action`];
+  const nestedKey = key.replace(/_tap_action$/, '');
+  const tapActions = roomConfig.tap_actions || {};
+  const explicit = roomConfig[key]
+    || roomConfig[`${key}_action`]
+    || tapActions[nestedKey]
+    || tapActions[key];
   if (explicit && typeof explicit === 'object') return explicit;
   if (typeof explicit === 'string') return { action: explicit };
 
@@ -136,17 +141,14 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
   const resolvedLights = lights.length || !autoEntities ? lights : areaEntities(hass, areaId, 'light');
   const resolvedCovers = covers.length || !autoEntities ? covers : areaEntities(hass, areaId, 'cover');
   const motion = roomConfig.motion || roomConfig.motion_sensor || roomConfig.presence || null;
+  const windowEntity = roomConfig.window || roomConfig.window_sensor || roomConfig.opening_sensor || null;
   const color = safeCssColor(roomConfig.color) || colorForRoom(areaId, name, index) || DEFAULT_COLOR;
   const foreground = safeCssColor(roomConfig.foreground) || foregroundForColor(color);
-  const metrics = [
-    sensorMetric(hass, sensors.temperature || roomConfig.temperature, 'mdi:thermometer', 'Temperatura'),
-    sensorMetric(hass, sensors.humidity || roomConfig.humidity, 'mdi:water-percent', 'Umidità'),
-    sensorMetric(hass, sensors.illuminance || roomConfig.illuminance, 'mdi:brightness-5', 'Luce')
-  ].filter(Boolean);
   const activeLights = resolvedLights.filter((entityId) => isActiveEntity(hass, entityId));
   const activeCovers = resolvedCovers.filter((entityId) => isActiveEntity(hass, entityId));
   const motionState = motion ? hass.states[motion] : null;
   const motionActive = motion ? isActiveEntity(hass, motion) : false;
+  const windowActive = windowEntity ? isActiveEntity(hass, windowEntity) : false;
   const active = motionActive || activeLights.length > 0 || activeCovers.length > 0;
   const lightsSummaryEntity = firstConfiguredEntity(roomConfig, [
     'lights_summary_entity',
@@ -160,6 +162,27 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
     'covers_group',
     'cover_group'
   ]);
+  const summaryTapAction = resolveRoomAction(roomConfig, 'summary_tap_action');
+  const navigate = roomConfig.navigate || roomConfig.navigation_path || roomConfig.path || null;
+  const cardDefaultAction = navigate
+    ? { action: 'navigate', navigation_path: navigate }
+    : { action: 'more-info' };
+  const metrics = [
+    {
+      key: 'temperature',
+      metric: sensorMetric(hass, sensors.temperature || roomConfig.temperature, 'mdi:thermometer', 'Temperatura')
+    },
+    {
+      key: 'humidity',
+      metric: sensorMetric(hass, sensors.humidity || roomConfig.humidity, 'mdi:water-percent', 'Umidità')
+    },
+    {
+      key: 'illuminance',
+      metric: sensorMetric(hass, sensors.illuminance || roomConfig.illuminance, 'mdi:brightness-5', 'Luce')
+    }
+  ].flatMap(({ key, metric }) => (
+    metric ? [{ ...metric, tapAction: resolveRoomAction(roomConfig, `${key}_tap_action`, summaryTapAction) }] : []
+  ));
 
   return {
     areaId,
@@ -167,11 +190,19 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
     icon: roomConfig.icon || (area && area.icon) || 'mdi:home',
     color,
     foreground,
-    navigate: roomConfig.navigate || roomConfig.navigation_path || roomConfig.path || null,
+    navigate,
     motion,
     motionActive,
+    windowEntity,
+    windowActive,
     active,
-    summaryTapAction: resolveRoomAction(roomConfig, 'summary_tap_action'),
+    cardTapAction: resolveRoomAction(roomConfig, 'card_tap_action', cardDefaultAction),
+    statusTapAction: resolveRoomAction(roomConfig, 'status_tap_action', summaryTapAction),
+    windowTapAction: resolveRoomAction(roomConfig, 'window_tap_action', summaryTapAction),
+    lightsTapAction: resolveRoomAction(roomConfig, 'lights_tap_action', { action: 'toggle' }),
+    coversTapAction: resolveRoomAction(roomConfig, 'covers_tap_action', { action: 'more-info' }),
+    summaryTapAction,
+    showLastChanged: roomConfig.show_last_changed !== false,
     lastChanged: motionState ? relativeTime(motionState.last_changed || motionState.last_updated) : '',
     lights: resolvedLights,
     covers: resolvedCovers,

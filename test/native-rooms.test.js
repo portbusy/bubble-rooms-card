@@ -24,6 +24,10 @@ const hass = {
       last_changed: '2026-07-09T10:00:00.000Z',
       attributes: { friendly_name: 'Movimento sala' }
     },
+    'binary_sensor.sala_finestra': {
+      state: 'on',
+      attributes: { friendly_name: 'Finestra sala', device_class: 'window' }
+    },
     'light.sala_madia': {
       state: 'on',
       attributes: { friendly_name: 'Luce madia' }
@@ -63,6 +67,7 @@ test('resolveNativeRoom uses native area data and auto-discovers area entities',
   assert.equal(room.icon, 'mdi:sofa');
   assert.equal(room.motionActive, true);
   assert.equal(room.active, true);
+  assert.equal(room.windowEntity, null);
   assert.deepEqual(room.summaryTapAction, { action: 'more-info' });
   assert.deepEqual(room.lights, ['light.sala_madia', 'light.sala_tavolo']);
   assert.deepEqual(room.covers, ['cover.tapparella_sala']);
@@ -100,6 +105,31 @@ test('summary action supports simple form fields and advanced tap action objects
     }, 'summary_tap_action'),
     { action: 'toggle', entity_id: 'light.sala_madia' }
   );
+});
+
+test('resolveNativeRoom keeps the window separate and resolves per-chip tap actions', () => {
+  const room = resolveNativeRoom(hass, {
+    area: 'sala',
+    motion: 'binary_sensor.sala_motion',
+    window: 'binary_sensor.sala_finestra',
+    temperature: 'sensor.sala_temperatura',
+    tap_actions: {
+      card: { action: 'navigate', navigation_path: '#sala' },
+      window: { action: 'more-info' },
+      temperature: { action: 'navigate', navigation_path: '#clima' },
+      lights: { action: 'more-info' },
+      covers: { action: 'toggle' }
+    }
+  });
+
+  assert.equal(room.windowEntity, 'binary_sensor.sala_finestra');
+  assert.equal(room.windowActive, true);
+  assert.equal(room.showLastChanged, true);
+  assert.deepEqual(room.cardTapAction, { action: 'navigate', navigation_path: '#sala' });
+  assert.deepEqual(room.windowTapAction, { action: 'more-info' });
+  assert.deepEqual(room.metrics[0].tapAction, { action: 'navigate', navigation_path: '#clima' });
+  assert.deepEqual(room.lightsTapAction, { action: 'more-info' });
+  assert.deepEqual(room.coversTapAction, { action: 'toggle' });
 });
 
 test('resolveNativeRoom supports explicit entities, custom color, and disabled auto discovery', () => {
