@@ -19,8 +19,8 @@ const NATIVE_ROOM_STYLES = `
   gap: 0;
   padding: 0;
   overflow: hidden;
-  border-radius: var(--ha-card-border-radius, 24px);
-  border: 1px solid color-mix(in srgb, var(--brc-color) 24%, var(--divider-color, rgba(0, 0, 0, 0.12)));
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--brc-color) 30%, var(--divider-color, rgba(0, 0, 0, 0.12)));
   background: var(--card-background-color, #ffffff);
   color: var(--primary-text-color);
   box-shadow:
@@ -37,29 +37,13 @@ const NATIVE_ROOM_STYLES = `
   outline: 2px solid var(--brc-color);
   outline-offset: 3px;
 }
-.brc-room--active {
-  border-color: color-mix(in srgb, var(--brc-color) 42%, transparent);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    0 0 0 1px color-mix(in srgb, var(--brc-color) 26%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
 .brc-room__hero {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 9px;
-  min-height: 74px;
+  gap: 8px;
+  min-height: 0;
   padding: 16px 18px 18px;
-  color: var(--primary-text-color);
-  background:
-    linear-gradient(120deg,
-      color-mix(in srgb, var(--brc-color) 76%, transparent) 0%,
-      color-mix(in srgb, var(--brc-color) 44%, transparent) 36%,
-      color-mix(in srgb, var(--brc-color) 16%, transparent) 66%,
-      transparent 100%);
-}
-.brc-room--active .brc-room__hero {
   color: var(--brc-fg);
   background:
     linear-gradient(120deg,
@@ -83,18 +67,14 @@ const NATIVE_ROOM_STYLES = `
   display: grid;
   place-items: center;
   position: absolute;
-  top: 15px;
-  right: 18px;
+  top: -2px;
+  right: -2px;
   width: 42px;
   height: 42px;
   border-radius: 0;
-  color: color-mix(in srgb, var(--brc-color) 76%, #1f2937);
+  color: color-mix(in srgb, var(--brc-color) 85%, transparent);
   background: transparent;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.16));
-}
-.brc-room--active .brc-room__icon {
-  color: color-mix(in srgb, var(--brc-color) 80%, #1f2937);
-  background: transparent;
 }
 .brc-room__icon ha-icon {
   --mdc-icon-size: 40px;
@@ -105,7 +85,7 @@ const NATIVE_ROOM_STYLES = `
 .brc-room__name {
   margin: 0;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
@@ -114,35 +94,21 @@ const NATIVE_ROOM_STYLES = `
 .brc-room__state {
   display: none;
 }
-.brc-room__badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  margin-left: auto;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  background: color-mix(in srgb, var(--card-background-color, #ffffff) 62%, transparent);
-  color: var(--secondary-text-color);
-}
-.brc-room--active .brc-room__badge {
-  background: color-mix(in srgb, var(--brc-fg) 20%, transparent);
-  color: var(--brc-fg);
-}
 .brc-room__meta {
   display: flex;
   flex-wrap: nowrap;
   gap: 8px;
   min-height: 20px;
   align-items: center;
-  padding-right: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: color-mix(in srgb, var(--brc-fg) 92%, transparent);
   overflow: hidden;
 }
 .brc-room__presence {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: color-mix(in srgb, var(--brc-fg) 30%, transparent);
   flex: 0 0 auto;
@@ -152,56 +118,56 @@ const NATIVE_ROOM_STYLES = `
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--brc-active-color) 28%, transparent);
 }
 .brc-room__metric,
+.brc-room__window,
 .brc-room__summary-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0;
   min-width: 0;
   min-height: 20px;
   padding: 0;
   border-radius: 999px;
   border: 0;
   font: inherit;
-  font-size: 13px;
+  font-size: inherit;
   font-weight: 500;
   background: transparent;
-  color: var(--primary-text-color);
+  color: inherit;
   cursor: pointer;
 }
-.brc-room__badge,
 .brc-room__metric,
+.brc-room__window,
 .brc-room__summary-pill {
   flex: 0 0 auto;
 }
-.brc-room--active .brc-room__metric,
-.brc-room--active .brc-room__summary-pill {
-  background: transparent;
-  color: var(--brc-fg);
-}
 .brc-room__metric:hover,
+.brc-room__window:hover,
 .brc-room__summary-pill:hover {
-  color: color-mix(in srgb, var(--brc-color) 78%, #111827);
+  color: var(--brc-active-color);
 }
-.brc-room__metric ha-icon,
+.brc-room__window ha-icon,
 .brc-room__summary-pill ha-icon,
 .brc-control ha-icon {
   --mdc-icon-size: 18px;
 }
 .brc-room__controls {
-  padding: 16px 18px 18px;
-  background: var(--card-background-color, #ffffff);
+  padding: 8px 14px 12px;
+  background:
+    linear-gradient(120deg,
+      color-mix(in srgb, var(--brc-color) 13%, transparent) 0%,
+      color-mix(in srgb, var(--brc-color) 4%, transparent) 100%);
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 .brc-control {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
   height: 34px;
-  padding: 0 14px;
+  padding: 0 13px;
   border: 1px solid color-mix(in srgb, var(--brc-color) 18%, transparent);
   border-radius: 999px;
   font: inherit;
@@ -212,35 +178,31 @@ const NATIVE_ROOM_STYLES = `
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.11);
   cursor: pointer;
 }
+.brc-control ha-icon {
+  color: var(--secondary-text-color);
+}
 .brc-control__label {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 .brc-control--active {
-  color: color-mix(in srgb, var(--brc-color) 72%, #111827);
+  color: var(--primary-text-color);
   background: color-mix(in srgb, var(--brc-color) 18%, var(--card-background-color, #ffffff));
   border-color: color-mix(in srgb, var(--brc-color) 50%, transparent);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
 }
+.brc-control--active ha-icon {
+  color: var(--brc-color);
+}
 .brc-control--light.brc-control--active,
 .brc-control--cover.brc-control--active {
-  color: color-mix(in srgb, var(--brc-active-color) 62%, #111827);
   background: color-mix(in srgb, var(--brc-active-color) 15%, var(--card-background-color, #ffffff));
   border-color: color-mix(in srgb, var(--brc-active-color) 45%, transparent);
 }
-.brc-room--active .brc-control {
-  background: color-mix(in srgb, var(--brc-fg) 92%, var(--brc-color));
-  color: color-mix(in srgb, var(--brc-color) 70%, #111827);
-}
-.brc-room--active .brc-control--active {
-  background: color-mix(in srgb, var(--brc-color) 18%, var(--brc-fg));
-  color: color-mix(in srgb, var(--brc-color) 82%, #111827);
-}
-.brc-room--active .brc-control--light.brc-control--active,
-.brc-room--active .brc-control--cover.brc-control--active {
-  background: color-mix(in srgb, var(--brc-active-color) 18%, var(--brc-fg));
-  color: color-mix(in srgb, var(--brc-active-color) 66%, #111827);
+.brc-control--light.brc-control--active ha-icon,
+.brc-control--cover.brc-control--active ha-icon {
+  color: var(--brc-active-color);
 }
 .brc-control--status {
   color: var(--primary-text-color);
@@ -255,11 +217,10 @@ const NATIVE_ROOM_STYLES = `
     border-radius: 22px;
   }
   .brc-room__hero {
-    min-height: 72px;
     padding: 15px 17px 17px;
   }
   .brc-room__controls {
-    padding: 15px 17px 17px;
+    padding: 8px 13px 12px;
   }
   .brc-control {
     height: 34px;
@@ -461,19 +422,25 @@ class BubbleRoomsCard extends HTMLElement {
     presence.title = room.motionActive ? 'Presenza rilevata' : 'Nessuna presenza';
     meta.appendChild(presence);
 
+    if (room.covers.length) {
+      const coverTarget = room.coversSummaryEntity || room.covers[0];
+      const coverOpen = room.activeCovers.length > 0;
+      const windowState = this._summaryButton(
+        coverOpen ? 'mdi:window-open-variant' : 'mdi:window-closed-variant',
+        '',
+        room,
+        coverTarget,
+        coverOpen ? 'Apertura rilevata' : 'Aperture chiuse'
+      );
+      windowState.className = 'brc-room__window';
+      meta.appendChild(windowState);
+    }
+
     for (const metric of room.metrics) {
-      const chip = this._summaryButton(metric.icon, metric.value, room, metric.entityId, metric.label);
+      const chip = this._summaryButton(null, metric.value, room, metric.entityId, metric.label);
       chip.className = 'brc-room__metric';
       meta.appendChild(chip);
     }
-
-    if (meta.children.length === 1) {
-      meta.appendChild(this._summaryPill(room.active ? 'mdi:motion-sensor' : 'mdi:check-circle-outline', room.active ? 'Attiva' : 'Tutto quieto', room, room.motion));
-    }
-    const badge = document.createElement('div');
-    badge.className = 'brc-room__badge';
-    badge.textContent = room.lastChanged || (room.active ? 'attiva ora' : 'nessun movimento');
-    meta.appendChild(badge);
     return meta;
   }
 
@@ -487,7 +454,8 @@ class BubbleRoomsCard extends HTMLElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.title = title || label;
-    button.append(this._icon(icon), document.createTextNode(label));
+    if (icon) button.appendChild(this._icon(icon));
+    if (label) button.appendChild(document.createTextNode(label));
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       this._runAction(room.summaryTapAction, fallbackEntityId);
@@ -514,11 +482,11 @@ class BubbleRoomsCard extends HTMLElement {
   _createRoomStatusControl(room) {
     const control = document.createElement('button');
     control.type = 'button';
-    control.className = `brc-control brc-control--status${room.active ? ' brc-control--active' : ''}`;
-    control.title = room.motionActive ? 'Presenza rilevata' : room.active ? 'Dispositivi attivi' : 'Stanza a riposo';
+    control.className = `brc-control brc-control--status${room.motionActive ? ' brc-control--active' : ''}`;
+    control.title = room.motionActive ? 'Presenza rilevata' : 'Stanza a riposo';
     control.append(
       this._icon(room.icon),
-      this._controlText(room.active ? 'Acceso' : 'Spento')
+      this._controlText('Accesso')
     );
     control.addEventListener('click', (event) => {
       event.stopPropagation();
