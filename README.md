@@ -61,7 +61,10 @@ If `rooms` contains at least one item, Bubble Rooms Card uses its native rendere
 and ignores the legacy Bubble Card generation options. The visual editor now
 shows only this native room form. Each room can be configured from Home
 Assistant's visual editor using native area, entity, icon, boolean, select, and
-color selectors.
+color selectors. Each room has its own native Home Assistant form: after an
+area is selected, movement, window, light, cover, and sensor selectors are
+limited to entities assigned to that area, including entities that inherit the
+area from their device.
 
 | Room key | Default | Description |
 |---|---|---|

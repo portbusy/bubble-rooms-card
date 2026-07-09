@@ -4,6 +4,7 @@ import { sortRooms } from './sort.js';
 import { buildRoomConfig } from './room-config.js';
 import { resolveSortSteps } from './sort-presets.js';
 import { entityName, isActiveEntity, resolveNativeRooms } from './native-rooms.js';
+import './bubble-rooms-card-editor.js';
 
 const NATIVE_ROOM_STYLES = `
 .brc-native-grid {
@@ -248,22 +249,6 @@ const NATIVE_ROOM_STYLES = `
   }
 }
 `;
-
-function nativeTapActionSelector(defaultAction) {
-  return {
-    ui_action: {
-      default_action: defaultAction,
-      actions: [
-        { action: 'more-info' },
-        { action: 'toggle' },
-        { action: 'navigate' },
-        { action: 'perform-action' },
-        { action: 'url' },
-        { action: 'none' }
-      ]
-    }
-  };
-}
 
 class BubbleRoomsCard extends HTMLElement {
   setConfig(config) {
@@ -684,166 +669,10 @@ class BubbleRoomsCard extends HTMLElement {
     };
   }
 
-  static getConfigForm() {
-    return {
-      schema: [
-        {
-          name: 'rooms',
-          selector: {
-            object: {
-              multiple: true,
-              label_field: 'name',
-              fields: {
-                name: { selector: { text: {} }, label: 'Nome' },
-                area: {
-                  selector: {
-                    area: {
-                      entity: {
-                        domain: ['binary_sensor', 'light', 'cover', 'sensor']
-                      }
-                    }
-                  },
-                  label: 'Area',
-                  description: 'Usata per il nome, l’icona e la scoperta automatica delle entità della stanza.'
-                },
-                icon: { selector: { icon: {} }, label: 'Icona' },
-                color: {
-                  selector: { text: { type: 'color' } },
-                  label: 'Colore stanza',
-                  description: 'Definisce il gradiente della testata e l’accento delle chip.'
-                },
-                foreground: {
-                  selector: { text: { type: 'color' } },
-                  label: 'Colore testo',
-                  description: 'Lascia vuoto per scegliere automaticamente un colore leggibile.'
-                },
-                auto_entities: {
-                  selector: { boolean: {} },
-                  label: 'Trova automaticamente luci e tapparelle nell’area',
-                  description: 'Disattivalo solo quando vuoi usare le liste manuali qui sotto.',
-                  default: true
-                },
-                motion: {
-                  selector: { entity: { filter: { domain: 'binary_sensor', device_class: ['motion', 'occupancy', 'presence'] } } },
-                  label: 'Sensore movimento o presenza',
-                  description: 'Alimenta il pallino di presenza e il badge dell’ultimo aggiornamento.'
-                },
-                show_last_changed: {
-                  selector: { boolean: {} },
-                  label: 'Mostra badge ultimo aggiornamento',
-                  description: 'Visualizza a destra “7 ore fa”, calcolato dal sensore movimento o presenza.',
-                  default: true
-                },
-                window: {
-                  selector: {
-                    entity: {
-                      filter: {
-                        domain: 'binary_sensor',
-                        device_class: ['window', 'door', 'opening', 'garage_door']
-                      }
-                    }
-                  },
-                  label: 'Sensore finestra o apertura',
-                  description: 'Opzionale. Mostra l’icona finestra nella riga sensori; non usa più le tapparelle.'
-                },
-                lights: {
-                  selector: { entity: { multiple: true, reorder: true, filter: { domain: 'light' } } },
-                  label: 'Chip luci',
-                  description: 'Le luci mostrate nella fascia inferiore. Lascia vuoto con la scoperta automatica attiva.'
-                },
-                lights_summary_entity: {
-                  selector: { entity: { filter: { domain: ['light', 'group'] } } },
-                  label: 'Gruppo luci per il tocco',
-                  description: 'Opzionale. Diventa il target dell’azione delle chip luce, utile per controllare più luci insieme.'
-                },
-                covers: {
-                  selector: { entity: { multiple: true, reorder: true, filter: { domain: 'cover' } } },
-                  label: 'Chip tapparelle e cover',
-                  description: 'Le cover mostrate nella fascia inferiore. Lascia vuoto con la scoperta automatica attiva.'
-                },
-                covers_summary_entity: {
-                  selector: { entity: { filter: { domain: ['cover', 'group'] } } },
-                  label: 'Gruppo tapparelle per il tocco',
-                  description: 'Opzionale. Diventa il target dell’azione delle chip tapparella, utile per controllarne più di una.'
-                },
-                temperature: {
-                  selector: { entity: { filter: { domain: 'sensor' } } },
-                  label: 'Sensore temperatura'
-                },
-                humidity: {
-                  selector: { entity: { filter: { domain: 'sensor' } } },
-                  label: 'Sensore umidità'
-                },
-                illuminance: {
-                  selector: { entity: { filter: { domain: 'sensor' } } },
-                  label: 'Sensore illuminamento'
-                },
-                tap_actions: {
-                  selector: {
-                    object: {
-                      fields: {
-                        card: {
-                          label: 'Testata della stanza',
-                          description: 'Tocco sullo spazio libero della card.',
-                          selector: nativeTapActionSelector({ action: 'more-info' })
-                        },
-                        status: {
-                          label: 'Chip Accesso',
-                          description: 'Tocco sulla prima chip con l’icona della stanza.',
-                          selector: nativeTapActionSelector({ action: 'more-info' })
-                        },
-                        window: {
-                          label: 'Indicatore finestra',
-                          description: 'Tocco sull’icona apertura nella riga sensori.',
-                          selector: nativeTapActionSelector({ action: 'more-info' })
-                        },
-                        temperature: {
-                          label: 'Temperatura',
-                          selector: nativeTapActionSelector({ action: 'more-info' })
-                        },
-                        humidity: {
-                          label: 'Umidità',
-                          selector: nativeTapActionSelector({ action: 'more-info' })
-                        },
-                        illuminance: {
-                          label: 'Illuminamento',
-                          selector: nativeTapActionSelector({ action: 'more-info' })
-                        },
-                        lights: {
-                          label: 'Chip luci',
-                          description: 'Predefinita: toggle dell’entità toccata.',
-                          selector: nativeTapActionSelector({ action: 'toggle' })
-                        },
-                        covers: {
-                          label: 'Chip tapparelle e cover',
-                          description: 'Predefinita: more-info dell’entità toccata.',
-                          selector: nativeTapActionSelector({ action: 'more-info' })
-                        }
-                      }
-                    }
-                  },
-                  label: 'Azioni al tocco',
-                  description: 'Scegli qui un’azione nativa Home Assistant per ogni elemento interattivo della card.'
-                }
-              }
-            }
-          }
-        }
-      ],
-      computeLabel(schemaItem) {
-        const labels = {
-          rooms: 'Stanze'
-        };
-        return labels[schemaItem.name] || schemaItem.name;
-      },
-      computeHelper(schemaItem) {
-        const helpers = {
-          rooms: 'Configura le stanze con selector nativi Home Assistant. Le entità automatiche usano l’area scelta; i campi luci/cover servono solo per override manuali.'
-        };
-        return helpers[schemaItem.name];
-      }
-    };
+  static getConfigElement() {
+    return document.createElement('bubble-rooms-card-editor');
   }
+
 }
 
 customElements.define('bubble-rooms-card', BubbleRoomsCard);
