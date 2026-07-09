@@ -15,18 +15,16 @@ const NATIVE_ROOM_STYLES = `
   --brc-fg: #ffffff;
   position: relative;
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 0;
+  padding: 0;
   overflow: hidden;
-  border-radius: var(--ha-card-border-radius, 18px);
+  border-radius: var(--ha-card-border-radius, 24px);
   border: 1px solid color-mix(in srgb, var(--brc-color) 18%, var(--divider-color, rgba(0, 0, 0, 0.12)));
-  background:
-    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--brc-color) 18%, transparent), transparent 32%),
-    linear-gradient(135deg, color-mix(in srgb, var(--card-background-color, #ffffff) 96%, var(--brc-color)), var(--card-background-color, #ffffff));
+  background: var(--card-background-color, #ffffff);
   color: var(--primary-text-color);
-  box-shadow: var(--ha-card-box-shadow, 0 8px 24px rgba(0, 0, 0, 0.12));
+  box-shadow: var(--ha-card-box-shadow, 0 10px 28px rgba(0, 0, 0, 0.12));
   cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 .brc-room:hover {
   transform: translateY(-1px);
@@ -36,11 +34,24 @@ const NATIVE_ROOM_STYLES = `
   outline-offset: 3px;
 }
 .brc-room--active {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--brc-color) 94%, #ffffff), color-mix(in srgb, var(--brc-color) 72%, #1f2937));
-  color: var(--brc-fg);
   border-color: color-mix(in srgb, var(--brc-color) 70%, transparent);
   box-shadow: 0 14px 34px color-mix(in srgb, var(--brc-color) 28%, transparent);
+}
+.brc-room__hero {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 14px;
+  min-height: 118px;
+  padding: 18px 18px 20px;
+  color: var(--primary-text-color);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--brc-color) 30%, var(--card-background-color, #ffffff)), color-mix(in srgb, var(--card-background-color, #ffffff) 82%, var(--brc-color)));
+}
+.brc-room--active .brc-room__hero {
+  color: var(--brc-fg);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--brc-color) 90%, #111827), color-mix(in srgb, var(--brc-color) 22%, var(--card-background-color, #ffffff)));
 }
 .brc-room__header,
 .brc-room__meta,
@@ -51,31 +62,33 @@ const NATIVE_ROOM_STYLES = `
 }
 .brc-room__header {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
-  align-items: center;
+  align-items: start;
 }
 .brc-room__icon {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
   color: var(--brc-color);
-  background: color-mix(in srgb, var(--brc-color) 12%, var(--card-background-color, #ffffff));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brc-color) 18%, transparent);
+  background: color-mix(in srgb, var(--brc-color) 14%, var(--card-background-color, #ffffff));
+  filter: drop-shadow(0 8px 10px color-mix(in srgb, var(--brc-color) 20%, transparent));
 }
 .brc-room--active .brc-room__icon {
-  color: var(--brc-fg);
-  background: color-mix(in srgb, var(--brc-fg) 20%, transparent);
-  box-shadow: none;
+  color: color-mix(in srgb, var(--brc-color) 78%, #111827);
+  background: color-mix(in srgb, var(--brc-fg) 80%, transparent);
+}
+.brc-room__icon ha-icon {
+  --mdc-icon-size: 34px;
 }
 .brc-room__title {
   min-width: 0;
 }
 .brc-room__name {
   margin: 0;
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.15;
   white-space: nowrap;
@@ -83,10 +96,10 @@ const NATIVE_ROOM_STYLES = `
   text-overflow: ellipsis;
 }
 .brc-room__state {
-  margin-top: 3px;
+  margin-top: 6px;
   font-size: 13px;
-  font-weight: 600;
-  opacity: 0.78;
+  font-weight: 700;
+  opacity: 0.82;
 }
 .brc-room__badge {
   display: inline-flex;
@@ -96,7 +109,7 @@ const NATIVE_ROOM_STYLES = `
   border-radius: 999px;
   font-size: 13px;
   font-weight: 700;
-  background: color-mix(in srgb, var(--secondary-background-color, #f1f2f6) 84%, var(--brc-color));
+  background: color-mix(in srgb, var(--card-background-color, #ffffff) 62%, transparent);
   color: var(--secondary-text-color);
 }
 .brc-room--active .brc-room__badge {
@@ -106,8 +119,8 @@ const NATIVE_ROOM_STYLES = `
 .brc-room__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  min-height: 26px;
+  gap: 12px;
+  min-height: 30px;
 }
 .brc-room__metric,
 .brc-room__summary-pill {
@@ -116,25 +129,24 @@ const NATIVE_ROOM_STYLES = `
   gap: 6px;
   min-width: 0;
   min-height: 30px;
-  padding: 0 10px;
+  padding: 0 2px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--brc-color) 28%, transparent);
+  border: 0;
   font: inherit;
-  font-size: 13px;
-  font-weight: 650;
-  background: color-mix(in srgb, var(--card-background-color, #ffffff) 58%, transparent);
+  font-size: 16px;
+  font-weight: 700;
+  background: transparent;
   color: var(--primary-text-color);
   cursor: pointer;
 }
 .brc-room--active .brc-room__metric,
 .brc-room--active .brc-room__summary-pill {
-  border-color: color-mix(in srgb, var(--brc-fg) 28%, transparent);
-  background: color-mix(in srgb, var(--brc-fg) 15%, transparent);
+  background: transparent;
   color: var(--brc-fg);
 }
 .brc-room__metric:hover,
 .brc-room__summary-pill:hover {
-  background: color-mix(in srgb, var(--brc-color) 16%, var(--card-background-color, #ffffff));
+  color: color-mix(in srgb, var(--brc-color) 78%, #111827);
 }
 .brc-room__metric ha-icon,
 .brc-room__summary-pill ha-icon,
@@ -142,15 +154,11 @@ const NATIVE_ROOM_STYLES = `
   --mdc-icon-size: 18px;
 }
 .brc-room__controls {
-  padding: 10px;
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--secondary-background-color, #f1f2f6) 82%, transparent);
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-  gap: 8px;
-}
-.brc-room--active .brc-room__controls {
-  background: color-mix(in srgb, var(--brc-fg) 16%, transparent);
+  padding: 16px 18px 18px;
+  background: var(--card-background-color, #ffffff);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 .brc-control {
   display: inline-flex;
@@ -158,15 +166,16 @@ const NATIVE_ROOM_STYLES = `
   justify-content: center;
   gap: 8px;
   min-width: 0;
-  height: 42px;
-  padding: 0 13px;
-  border: 1px solid color-mix(in srgb, var(--brc-color) 18%, transparent);
-  border-radius: 16px;
+  height: 46px;
+  padding: 0 18px;
+  border: 1px solid color-mix(in srgb, var(--brc-color) 16%, var(--divider-color, rgba(0, 0, 0, 0.12)));
+  border-radius: 999px;
   font: inherit;
-  font-size: 14px;
-  font-weight: 650;
+  font-size: 15px;
+  font-weight: 750;
   color: var(--primary-text-color);
-  background: var(--card-background-color, #ffffff);
+  background: color-mix(in srgb, var(--card-background-color, #ffffff) 82%, var(--brc-color));
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
   cursor: pointer;
 }
 .brc-control__label {
@@ -175,34 +184,44 @@ const NATIVE_ROOM_STYLES = `
   text-overflow: ellipsis;
 }
 .brc-control--active {
-  color: var(--brc-fg);
-  background: var(--brc-color);
+  color: color-mix(in srgb, var(--brc-color) 72%, #111827);
+  background: color-mix(in srgb, var(--brc-color) 18%, var(--card-background-color, #ffffff));
   border-color: transparent;
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--brc-color) 28%, transparent);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.18);
 }
 .brc-room--active .brc-control {
-  background: color-mix(in srgb, var(--brc-fg) 88%, transparent);
-  color: var(--brc-color);
-  border-color: transparent;
+  background: color-mix(in srgb, var(--brc-fg) 92%, var(--brc-color));
+  color: color-mix(in srgb, var(--brc-color) 70%, #111827);
 }
 .brc-room--active .brc-control--active {
-  background: color-mix(in srgb, var(--brc-color) 82%, #111827);
-  color: var(--brc-fg);
+  background: color-mix(in srgb, var(--brc-color) 18%, var(--brc-fg));
+  color: color-mix(in srgb, var(--brc-color) 82%, #111827);
+}
+.brc-control--status {
+  color: var(--primary-text-color);
+  background: color-mix(in srgb, var(--brc-color) 10%, var(--card-background-color, #ffffff));
+}
+.brc-control--status.brc-control--active {
+  color: var(--primary-text-color);
+  background: color-mix(in srgb, var(--brc-color) 16%, var(--card-background-color, #ffffff));
 }
 @media (max-width: 520px) {
   .brc-room {
-    padding: 14px;
-    border-radius: 16px;
+    border-radius: 20px;
+  }
+  .brc-room__hero {
+    min-height: 112px;
+    padding: 16px;
   }
   .brc-room__header {
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
   }
   .brc-room__badge {
     grid-column: 1 / -1;
     justify-self: start;
   }
   .brc-room__controls {
-    grid-template-columns: 1fr;
+    padding: 14px 16px 16px;
   }
 }
 `;
@@ -362,8 +381,10 @@ class BubbleRoomsCard extends HTMLElement {
       }
     });
 
-    card.appendChild(this._createNativeHeader(room));
-    card.appendChild(this._createNativeMeta(room));
+    const hero = document.createElement('div');
+    hero.className = 'brc-room__hero';
+    hero.append(this._createNativeHeader(room), this._createNativeMeta(room));
+    card.appendChild(hero);
     const controls = this._createNativeControls(room);
     if (controls) card.appendChild(controls);
     return card;
@@ -391,7 +412,7 @@ class BubbleRoomsCard extends HTMLElement {
     badge.className = 'brc-room__badge';
     badge.textContent = room.lastChanged || (room.active ? 'attiva ora' : 'nessun movimento');
 
-    header.append(iconWrap, title, badge);
+    header.append(title, badge, iconWrap);
     return header;
   }
 
@@ -442,22 +463,37 @@ class BubbleRoomsCard extends HTMLElement {
 
   _createNativeControls(room) {
     const entities = [...room.lights, ...room.covers];
-    if (entities.length === 0) return null;
-
     const controls = document.createElement('div');
     controls.className = 'brc-room__controls';
+    controls.appendChild(this._createRoomStatusControl(room));
     for (const entityId of entities) {
-      controls.appendChild(this._createNativeControl(entityId));
+      controls.appendChild(this._createNativeControl(entityId, room));
     }
     return controls;
   }
 
-  _createNativeControl(entityId) {
+  _createRoomStatusControl(room) {
+    const control = document.createElement('button');
+    control.type = 'button';
+    control.className = `brc-control brc-control--status${room.active ? ' brc-control--active' : ''}`;
+    control.title = room.motionActive ? 'Presenza rilevata' : room.active ? 'Dispositivi attivi' : 'Stanza a riposo';
+    control.append(
+      this._icon(room.motionActive ? 'mdi:motion-sensor' : room.active ? 'mdi:power-plug' : 'mdi:check-circle-outline'),
+      this._controlText(room.active ? 'Attiva' : 'A riposo')
+    );
+    control.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this._activateRoom(room);
+    });
+    return control;
+  }
+
+  _createNativeControl(entityId, room) {
     const control = document.createElement('button');
     control.type = 'button';
     control.className = `brc-control${isActiveEntity(this._hass, entityId) ? ' brc-control--active' : ''}`;
     control.title = entityName(this._hass, entityId);
-    control.append(this._icon(this._entityIcon(entityId)), this._controlLabel(entityId));
+    control.append(this._icon(this._entityIcon(entityId)), this._controlLabel(entityId, room));
     control.addEventListener('click', (event) => {
       event.stopPropagation();
       this._toggleEntity(entityId);
@@ -470,11 +506,22 @@ class BubbleRoomsCard extends HTMLElement {
     return control;
   }
 
-  _controlLabel(entityId) {
+  _controlLabel(entityId, room) {
     const label = document.createElement('span');
     label.className = 'brc-control__label';
-    label.textContent = entityName(this._hass, entityId);
+    label.textContent = this._shortEntityName(entityName(this._hass, entityId), room.name);
     return label;
+  }
+
+  _shortEntityName(name, roomName) {
+    const normalizedRoom = String(roomName || '').trim();
+    if (!normalizedRoom) return name;
+    const escapedRoom = normalizedRoom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const cleaned = String(name || '')
+      .replace(new RegExp(`\\b${escapedRoom}\\b`, 'ig'), '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    return cleaned || name;
   }
 
   _entityIcon(entityId) {
@@ -483,6 +530,13 @@ class BubbleRoomsCard extends HTMLElement {
     if (entityId.startsWith('light.')) return isActiveEntity(this._hass, entityId) ? 'mdi:lightbulb-on' : 'mdi:lightbulb';
     if (entityId.startsWith('cover.')) return isActiveEntity(this._hass, entityId) ? 'mdi:window-shutter-open' : 'mdi:window-shutter';
     return 'mdi:toggle-switch';
+  }
+
+  _controlText(value) {
+    const label = document.createElement('span');
+    label.className = 'brc-control__label';
+    label.textContent = value;
+    return label;
   }
 
   _icon(icon) {
