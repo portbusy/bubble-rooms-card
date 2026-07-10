@@ -170,6 +170,17 @@ test('resolveNativeRoom supports explicit entities, custom color, and disabled a
   assert.equal(room.active, false);
 });
 
+test('resolveNativeRoom can exclude individual automatically discovered lights and covers', () => {
+  const room = resolveNativeRoom(hass, {
+    area: 'sala',
+    excluded_lights: ['light.sala_tavolo'],
+    excluded_covers: ['cover.tapparella_sala']
+  });
+
+  assert.deepEqual(room.lights, ['light.sala_madia']);
+  assert.deepEqual(room.covers, []);
+});
+
 test('a room is active when devices are active even without motion', () => {
   const room = resolveNativeRoom(hass, {
     name: 'Media',

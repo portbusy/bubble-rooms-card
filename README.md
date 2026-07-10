@@ -76,6 +76,8 @@ editor so complete action objects are stored without string conversion.
 | `color` | automatic room palette | Accent color for active state, controls, and card atmosphere. |
 | `foreground` | automatic contrast | Optional text color for active cards. |
 | `auto_entities` | `true` | When enabled, missing `lights` and `covers` are discovered from the selected area. |
+| `excluded_lights` | none | Automatic light entities to omit while keeping area discovery enabled. |
+| `excluded_covers` | none | Automatic cover entities to omit while keeping area discovery enabled. |
 | `motion` | none | Motion/presence binary sensor. Drives the presence dot and the last-changed badge. |
 | `automation` | none | Optional `input_boolean` that drives the `Accesso` chip and toggles room automations on tap. Aliases: `automation_control`, `automation_entity`. It is intentionally not area-filtered because helpers are often global. |
 | `show_last_changed` | `true` | Shows the relative-time badge, such as `7 ore fa`, when `motion` is configured. |

@@ -271,6 +271,13 @@ class BubbleRoomsCard extends HTMLElement {
       this._container = document.createElement('div');
       this.appendChild(this._container);
     }
+    // The visual editor changes config without necessarily sending a new hass
+    // object. Repaint native rooms here so its preview always mirrors switches
+    // and entity selections immediately.
+    if (this._hass && this._hasNativeRooms()) {
+      this._setMode('native');
+      this._renderNativeRooms(this._hass);
+    }
   }
 
   set hass(hass) {
@@ -478,7 +485,8 @@ class BubbleRoomsCard extends HTMLElement {
     if (room.showLastChanged && room.lastChanged) {
       const badge = document.createElement('div');
       badge.className = 'brc-room__badge';
-      badge.textContent = room.lastChanged;
+      badge.title = 'Ultimo aggiornamento del sensore di presenza';
+      badge.textContent = `Aggiornato ${room.lastChanged}`;
       meta.appendChild(badge);
     }
     return meta;

@@ -137,9 +137,15 @@ export function resolveNativeRoom(hass, roomConfig, index = 0) {
   const autoEntities = roomConfig.auto_entities !== false;
   const lights = asArray(roomConfig.lights);
   const covers = asArray(roomConfig.covers);
+  const excludedLights = new Set(asArray(roomConfig.excluded_lights));
+  const excludedCovers = new Set(asArray(roomConfig.excluded_covers));
   const sensors = roomConfig.sensors || {};
-  const resolvedLights = lights.length || !autoEntities ? lights : areaEntities(hass, areaId, 'light');
-  const resolvedCovers = covers.length || !autoEntities ? covers : areaEntities(hass, areaId, 'cover');
+  const resolvedLights = lights.length || !autoEntities
+    ? lights
+    : areaEntities(hass, areaId, 'light').filter((entityId) => !excludedLights.has(entityId));
+  const resolvedCovers = covers.length || !autoEntities
+    ? covers
+    : areaEntities(hass, areaId, 'cover').filter((entityId) => !excludedCovers.has(entityId));
   const motion = roomConfig.motion || roomConfig.motion_sensor || roomConfig.presence || null;
   const windowEntity = roomConfig.window || roomConfig.window_sensor || roomConfig.opening_sensor || null;
   const automationEntity = firstConfiguredEntity(roomConfig, [
