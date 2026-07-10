@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { areaScopedEntityIds, areaScopedEntitySelector } from '../src/bubble-rooms-card-editor.js';
+import { areaScopedEntityIds } from '../src/bubble-rooms-card-editor.js';
 
 const hass = {
   entities: {
@@ -12,6 +12,13 @@ const hass = {
   },
   devices: {
     termometro_sala: { area_id: 'sala' }
+  },
+  states: {
+    'binary_sensor.sala_motion': { attributes: { device_class: 'motion' } },
+    'light.sala_madia': { attributes: {} },
+    'sensor.sala_temperatura': { attributes: { device_class: 'temperature' } },
+    'light.camera': { attributes: {} },
+    'group.luci_piano_terra': { attributes: {} }
   }
 };
 
@@ -22,26 +29,16 @@ test('areaScopedEntityIds includes direct and device-area entities only', () => 
   );
 });
 
-test('areaScopedEntitySelector constrains native selectors after an area is selected', () => {
-  const selector = areaScopedEntitySelector(hass, 'sala', {
-    domains: ['light', 'group'],
-    multiple: true,
-    reorder: true
-  });
-
-  assert.deepEqual(selector, {
-    entity: {
-      filter: { domain: ['light', 'group'] },
-      multiple: true,
-      reorder: true,
-      include_entities: ['group.luci_piano_terra', 'light.sala_madia']
-    }
-  });
+test('areaScopedEntityIds keeps global groups and area-scoped entities for aggregate targets', () => {
+  assert.deepEqual(
+    areaScopedEntityIds(hass, 'sala', ['light', 'group']),
+    ['group.luci_piano_terra', 'light.sala_madia']
+  );
 });
 
-test('areaScopedEntitySelector keeps only domain filtering before an area is chosen', () => {
+test('areaScopedEntityIds applies device-class filtering after area filtering', () => {
   assert.deepEqual(
-    areaScopedEntitySelector(hass, '', { domains: 'sensor' }),
-    { entity: { filter: { domain: ['sensor'] } } }
+    areaScopedEntityIds(hass, 'sala', 'sensor', ['temperature']),
+    ['sensor.sala_temperatura']
   );
 });

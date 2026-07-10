@@ -1,232 +1,58 @@
 const BaseHTMLElement = typeof HTMLElement === 'undefined' ? class {} : HTMLElement;
 
-function nativeTapActionSelector(defaultAction) {
-  return {
-    ui_action: {
-      default_action: defaultAction,
-      actions: [
-        { action: 'more-info' },
-        { action: 'toggle' },
-        { action: 'navigate' },
-        { action: 'perform-action' },
-        { action: 'url' },
-        { action: 'none' }
-      ]
-    }
-  };
+function asArray(value) {
+  return Array.isArray(value) ? value : [value];
 }
 
-function asDomains(domains) {
-  return Array.isArray(domains) ? domains : [domains];
-}
-
-export function areaScopedEntityIds(hass, areaId, domains) {
+export function areaScopedEntityIds(hass, areaId, domains, deviceClasses) {
   if (!areaId) return [];
 
-  const allowedDomains = new Set(asDomains(domains));
+  const allowedDomains = new Set(asArray(domains));
+  const allowedDeviceClasses = deviceClasses ? new Set(deviceClasses) : null;
   const entities = hass && hass.entities ? hass.entities : {};
   const devices = hass && hass.devices ? hass.devices : {};
+  const states = hass && hass.states ? hass.states : {};
   const result = [];
 
   for (const [entityId, entity] of Object.entries(entities)) {
     const domain = entityId.split('.', 1)[0];
-    if (!allowedDomains.has(domain)) continue;
+    if (!allowedDomains.has(domain) || entity.disabled_by || entity.hidden_by) continue;
 
-    // Groups have no area assignment. Keep them available as explicit action targets.
+    // Groups have no area assignment, but are valid aggregate action targets.
     if (domain === 'group') {
-      result.push(entityId);
+      if (!allowedDeviceClasses) result.push(entityId);
       continue;
     }
 
     const entityAreaId = entity.area_id
       || (entity.device_id && devices[entity.device_id] && devices[entity.device_id].area_id);
-    if (entityAreaId === areaId) result.push(entityId);
+    if (entityAreaId !== areaId) continue;
+
+    const deviceClass = states[entityId] && states[entityId].attributes
+      ? states[entityId].attributes.device_class
+      : undefined;
+    if (allowedDeviceClasses && !allowedDeviceClasses.has(deviceClass)) continue;
+    result.push(entityId);
   }
 
   return result.sort();
 }
 
-export function areaScopedEntitySelector(hass, areaId, options) {
-  const domains = asDomains(options.domains);
-  const entity = {
-    filter: {
-      domain: domains,
-      ...(options.deviceClasses ? { device_class: options.deviceClasses } : {})
-    },
-    ...(options.multiple ? { multiple: true } : {}),
-    ...(options.reorder ? { reorder: true } : {})
-  };
-
-  if (areaId) {
-    entity.include_entities = areaScopedEntityIds(hass, areaId, domains);
-  }
-
-  return { entity };
+function isEmptyObject(value) {
+  return !value || (typeof value === 'object' && !Array.isArray(value) && !Object.keys(value).length);
 }
 
-function entityField(hass, areaId, name, label, options = {}) {
+function roomActionDefaults(room) {
   return {
-    name,
-    label,
-    ...(options.description ? { description: options.description } : {}),
-    selector: areaScopedEntitySelector(hass, areaId, options)
+    card: { action: 'more-info' },
+    status: room.automation ? { action: 'toggle' } : { action: 'more-info' },
+    window: { action: 'more-info' },
+    temperature: { action: 'more-info' },
+    humidity: { action: 'more-info' },
+    illuminance: { action: 'more-info' },
+    lights: { action: 'toggle' },
+    covers: { action: 'more-info' }
   };
-}
-
-function tapActionsField(hasAutomationControl) {
-  return {
-    name: 'tap_actions',
-    label: 'Azioni al tocco',
-    description: "Scegli l'azione Home Assistant per ogni elemento interattivo della card.",
-    selector: {
-      object: {
-        fields: {
-          card: {
-            label: 'Testata della stanza',
-            description: 'Tocco sullo spazio libero della card.',
-            selector: nativeTapActionSelector({ action: 'more-info' })
-          },
-          status: {
-            label: 'Chip Accesso',
-            description: hasAutomationControl
-              ? "Predefinita: toggle dell'input boolean automazioni."
-              : "Tocco sulla prima chip con l'icona della stanza.",
-            selector: nativeTapActionSelector(
-              hasAutomationControl ? { action: 'toggle' } : { action: 'more-info' }
-            )
-          },
-          window: {
-            label: 'Indicatore finestra',
-            description: "Tocco sull'icona apertura nella riga sensori.",
-            selector: nativeTapActionSelector({ action: 'more-info' })
-          },
-          temperature: {
-            label: 'Temperatura',
-            selector: nativeTapActionSelector({ action: 'more-info' })
-          },
-          humidity: {
-            label: 'Umidita',
-            selector: nativeTapActionSelector({ action: 'more-info' })
-          },
-          illuminance: {
-            label: 'Illuminamento',
-            selector: nativeTapActionSelector({ action: 'more-info' })
-          },
-          lights: {
-            label: 'Chip luci',
-            description: "Predefinita: toggle dell'entita o del gruppo configurato.",
-            selector: nativeTapActionSelector({ action: 'toggle' })
-          },
-          covers: {
-            label: 'Chip tapparelle e cover',
-            description: "Predefinita: more-info dell'entita o del gruppo configurato.",
-            selector: nativeTapActionSelector({ action: 'more-info' })
-          }
-        }
-      }
-    }
-  };
-}
-
-export function roomEditorSchema(hass, room = {}) {
-  const areaId = room.area || room.area_id || '';
-
-  return [
-    {
-      type: 'expandable',
-      name: 'room',
-      title: 'Stanza',
-      flatten: true,
-      schema: [
-        { name: 'name', label: 'Nome', selector: { text: {} } },
-        {
-          name: 'area',
-          label: 'Area',
-          description: 'Sceglila prima: tutti i selector qui sotto verranno filtrati su questa area.',
-          selector: { area: {} }
-        },
-        { name: 'icon', label: 'Icona', selector: { icon: {} } },
-        {
-          name: 'color',
-          label: 'Colore stanza',
-          description: "Definisce il gradiente della testata e l'accento delle chip.",
-          selector: { text: { type: 'color' } }
-        },
-        {
-          name: 'foreground',
-          label: 'Colore testo',
-          description: 'Lascia vuoto per scegliere automaticamente un colore leggibile.',
-          selector: { text: { type: 'color' } }
-        }
-      ]
-    },
-    {
-      type: 'expandable',
-      name: 'entities',
-      title: 'Entita della stanza',
-      flatten: true,
-      schema: [
-        {
-          name: 'auto_entities',
-          label: "Trova automaticamente luci e tapparelle nell'area",
-          description: 'Disattivalo solo quando vuoi usare le liste manuali qui sotto.',
-          default: true,
-          selector: { boolean: {} }
-        },
-        entityField(hass, '', 'automation', 'Input boolean automazioni', {
-          domains: 'input_boolean',
-          description: 'Controlla la chip Accesso. Gli input boolean sono helper globali e restano selezionabili.'
-        }),
-        entityField(hass, areaId, 'motion', 'Sensore movimento o presenza', {
-          domains: 'binary_sensor',
-          deviceClasses: ['motion', 'occupancy', 'presence'],
-          description: "Alimenta il pallino di presenza e il badge dell'ultimo aggiornamento."
-        }),
-        {
-          name: 'show_last_changed',
-          label: 'Mostra badge ultimo aggiornamento',
-          description: 'Visualizza a destra "7 ore fa", calcolato dal sensore movimento o presenza.',
-          default: true,
-          selector: { boolean: {} }
-        },
-        entityField(hass, areaId, 'window', 'Sensore finestra o apertura', {
-          domains: 'binary_sensor',
-          deviceClasses: ['window', 'door', 'opening', 'garage_door'],
-          description: "Opzionale. Mostra l'icona finestra nella riga sensori; non usa le tapparelle."
-        }),
-        entityField(hass, areaId, 'lights', 'Chip luci', {
-          domains: 'light',
-          multiple: true,
-          reorder: true,
-          description: 'Le luci visualizzate nella fascia inferiore.'
-        }),
-        entityField(hass, areaId, 'lights_summary_entity', 'Gruppo luci per il tocco', {
-          domains: ['light', 'group'],
-          description: "Opzionale. Diventa il target dell'azione delle chip luce."
-        }),
-        entityField(hass, areaId, 'covers', 'Chip tapparelle e cover', {
-          domains: 'cover',
-          multiple: true,
-          reorder: true,
-          description: 'Le cover visualizzate nella fascia inferiore.'
-        }),
-        entityField(hass, areaId, 'covers_summary_entity', 'Gruppo tapparelle per il tocco', {
-          domains: ['cover', 'group'],
-          description: "Opzionale. Diventa il target dell'azione delle chip tapparella."
-        }),
-        entityField(hass, areaId, 'temperature', 'Sensore temperatura', { domains: 'sensor' }),
-        entityField(hass, areaId, 'humidity', 'Sensore umidita', { domains: 'sensor' }),
-        entityField(hass, areaId, 'illuminance', 'Sensore illuminamento', { domains: 'sensor' })
-      ]
-    },
-    {
-      type: 'expandable',
-      name: 'actions',
-      title: 'Azioni',
-      flatten: true,
-      schema: [tapActionsField(Boolean(room.automation || room.automation_control || room.automation_entity))]
-    }
-  ];
 }
 
 export class BubbleRoomsCardEditor extends BaseHTMLElement {
@@ -252,8 +78,8 @@ export class BubbleRoomsCardEditor extends BaseHTMLElement {
     if (!this._config || !this.isConnected) return;
 
     this.replaceChildren(this._styleElement());
-
     const rooms = this._config.rooms || [];
+
     if (!rooms.length) {
       const empty = document.createElement('div');
       empty.className = 'brc-editor__empty';
@@ -263,10 +89,7 @@ export class BubbleRoomsCardEditor extends BaseHTMLElement {
 
     rooms.forEach((room, index) => this.appendChild(this._roomElement(room || {}, index)));
 
-    const addButton = document.createElement('button');
-    addButton.type = 'button';
-    addButton.className = 'brc-editor__add';
-    addButton.textContent = 'Aggiungi stanza';
+    const addButton = this._button('Aggiungi stanza', 'brc-editor__add');
     addButton.addEventListener('click', () => {
       this._setConfig({ ...this._config, rooms: [...rooms, {}] }, true);
     });
@@ -281,40 +104,309 @@ export class BubbleRoomsCardEditor extends BaseHTMLElement {
     header.className = 'brc-editor__header';
     const title = document.createElement('h3');
     title.textContent = this._roomName(room, index);
-    const removeButton = document.createElement('button');
-    removeButton.type = 'button';
-    removeButton.className = 'brc-editor__remove';
-    removeButton.textContent = 'Rimuovi';
+    const removeButton = this._button('Rimuovi', 'brc-editor__remove');
     removeButton.addEventListener('click', () => {
       const rooms = this._config.rooms.filter((_, roomIndex) => roomIndex !== index);
       this._setConfig({ ...this._config, rooms }, true);
     });
     header.append(title, removeButton);
 
-    const form = document.createElement('ha-form');
-    form.hass = this._hass;
-    form.data = room;
-    form.schema = roomEditorSchema(this._hass, room);
-    form.addEventListener('value-changed', (event) => {
-      event.stopPropagation();
-      const nextRoom = { ...room, ...event.detail.value };
-      const rooms = this._config.rooms.map((current, roomIndex) => (
-        roomIndex === index ? nextRoom : current
-      ));
-      const mustRerender = nextRoom.area !== room.area || nextRoom.automation !== room.automation;
-      this._setConfig({ ...this._config, rooms }, mustRerender);
-    });
-
-    section.append(header, form);
+    section.append(
+      header,
+      this._roomPanel(room, index),
+      this._entitiesPanel(room, index),
+      this._actionsPanel(room, index)
+    );
     return section;
   }
 
-  _roomName(room, index) {
-    if (room.name) return room.name;
-    if (room.area && this._hass && this._hass.areas && this._hass.areas[room.area]) {
-      return this._hass.areas[room.area].name;
+  _roomPanel(room, index) {
+    const { panel, content } = this._panel('Stanza', true);
+    const row = document.createElement('div');
+    row.className = 'brc-editor__row';
+    row.append(
+      this._textField('Nome', room.name || '', (value) => this._updateRoom(index, { name: value })),
+      this._iconPicker(room.icon, (value) => this._updateRoom(index, { icon: value || undefined }))
+    );
+    content.append(
+      row,
+      this._areaPicker(room.area, (value) => this._updateRoom(index, { area: value || undefined }, true)),
+      this._textField('Colore stanza', room.color || '', (value) => this._updateRoom(index, { color: value || undefined })),
+      this._textField('Colore testo', room.foreground || '', (value) => this._updateRoom(index, { foreground: value || undefined }))
+    );
+    return panel;
+  }
+
+  _entitiesPanel(room, index) {
+    const { panel, content } = this._panel('Entita della stanza');
+    const areaId = room.area || '';
+
+    content.append(
+      this._switch(
+        "Trova automaticamente luci e tapparelle nell'area",
+        room.auto_entities !== false,
+        (checked) => this._updateRoom(index, { auto_entities: checked })
+      ),
+      this._entityPicker({
+        label: 'Input boolean automazioni',
+        value: room.automation,
+        domains: 'input_boolean',
+        description: 'Helper globale: controlla la chip Accesso.',
+        onValue: (value) => this._updateRoom(index, { automation: value || undefined }, true)
+      }),
+      this._entityPicker({
+        label: 'Sensore movimento o presenza',
+        value: room.motion,
+        areaId,
+        domains: 'binary_sensor',
+        deviceClasses: ['motion', 'occupancy', 'presence'],
+        onValue: (value) => this._updateRoom(index, { motion: value || undefined })
+      }),
+      this._switch(
+        'Mostra badge ultimo aggiornamento',
+        room.show_last_changed !== false,
+        (checked) => this._updateRoom(index, { show_last_changed: checked })
+      ),
+      this._entityPicker({
+        label: 'Sensore finestra o apertura',
+        value: room.window,
+        areaId,
+        domains: 'binary_sensor',
+        deviceClasses: ['window', 'door', 'opening', 'garage_door'],
+        onValue: (value) => this._updateRoom(index, { window: value || undefined })
+      }),
+      this._entityList({
+        label: 'Chip luci',
+        values: room.lights || [],
+        areaId,
+        domains: 'light',
+        onChange: (values) => this._updateRoom(index, { lights: values.length ? values : undefined }, true)
+      }),
+      this._entityPicker({
+        label: 'Gruppo luci per il tocco',
+        value: room.lights_summary_entity,
+        areaId,
+        domains: ['light', 'group'],
+        onValue: (value) => this._updateRoom(index, { lights_summary_entity: value || undefined })
+      }),
+      this._entityList({
+        label: 'Chip tapparelle e cover',
+        values: room.covers || [],
+        areaId,
+        domains: 'cover',
+        onChange: (values) => this._updateRoom(index, { covers: values.length ? values : undefined }, true)
+      }),
+      this._entityPicker({
+        label: 'Gruppo tapparelle per il tocco',
+        value: room.covers_summary_entity,
+        areaId,
+        domains: ['cover', 'group'],
+        onValue: (value) => this._updateRoom(index, { covers_summary_entity: value || undefined })
+      }),
+      this._entityPicker({
+        label: 'Sensore temperatura',
+        value: room.temperature,
+        areaId,
+        domains: 'sensor',
+        deviceClasses: ['temperature'],
+        onValue: (value) => this._updateRoom(index, { temperature: value || undefined })
+      }),
+      this._entityPicker({
+        label: 'Sensore umidita',
+        value: room.humidity,
+        areaId,
+        domains: 'sensor',
+        deviceClasses: ['humidity'],
+        onValue: (value) => this._updateRoom(index, { humidity: value || undefined })
+      }),
+      this._entityPicker({
+        label: 'Sensore illuminamento',
+        value: room.illuminance,
+        areaId,
+        domains: 'sensor',
+        deviceClasses: ['illuminance'],
+        onValue: (value) => this._updateRoom(index, { illuminance: value || undefined })
+      })
+    );
+    return panel;
+  }
+
+  _actionsPanel(room, index) {
+    const { panel, content } = this._panel('Azioni al tocco');
+    const defaults = roomActionDefaults(room);
+    const actions = room.tap_actions || {};
+    const labels = {
+      card: 'Testata della stanza',
+      status: 'Chip Accesso',
+      window: 'Indicatore finestra',
+      temperature: 'Temperatura',
+      humidity: 'Umidita',
+      illuminance: 'Illuminamento',
+      lights: 'Chip luci',
+      covers: 'Chip tapparelle e cover'
+    };
+
+    for (const [key, label] of Object.entries(labels)) {
+      const field = document.createElement('div');
+      field.className = 'brc-editor__yaml-field';
+      const fieldLabel = document.createElement('label');
+      fieldLabel.textContent = label;
+      const editor = document.createElement('ha-yaml-editor');
+      editor.defaultValue = actions[key] || defaults[key];
+      editor.addEventListener('value-changed', (event) => {
+        if (event.detail && event.detail.isValid === false) return;
+        this._updateTapAction(index, key, event.detail ? event.detail.value : undefined);
+      });
+      field.append(fieldLabel, editor);
+      content.appendChild(field);
     }
-    return `Stanza ${index + 1}`;
+    return panel;
+  }
+
+  _entityPicker(options) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'brc-editor__field';
+    const picker = document.createElement('ha-entity-picker');
+    picker.hass = this._hass;
+    picker.label = options.label;
+    picker.value = options.value || '';
+    picker.includeDomains = asArray(options.domains);
+    if (options.deviceClasses) picker.includeDeviceClasses = options.deviceClasses;
+    if (options.areaId !== undefined) {
+      picker.includeEntities = areaScopedEntityIds(
+        this._hass,
+        options.areaId,
+        options.domains,
+        options.deviceClasses
+      );
+    }
+    picker.addEventListener('value-changed', (event) => {
+      options.onValue(event.detail ? event.detail.value : undefined);
+    });
+    wrapper.appendChild(picker);
+
+    if (options.description) {
+      const description = document.createElement('div');
+      description.className = 'brc-editor__helper';
+      description.textContent = options.description;
+      wrapper.appendChild(description);
+    }
+    return wrapper;
+  }
+
+  _entityList(options) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'brc-editor__list';
+    const title = document.createElement('div');
+    title.className = 'brc-editor__list-title';
+    title.textContent = options.label;
+    wrapper.appendChild(title);
+
+    const values = [...options.values];
+    values.forEach((value, valueIndex) => {
+      const row = document.createElement('div');
+      row.className = 'brc-editor__list-row';
+      const picker = this._entityPicker({
+        label: `${options.label} ${valueIndex + 1}`,
+        value,
+        areaId: options.areaId,
+        domains: options.domains,
+        onValue: (nextValue) => {
+          const next = [...values];
+          if (nextValue) next[valueIndex] = nextValue;
+          else next.splice(valueIndex, 1);
+          options.onChange(next);
+        }
+      });
+      const remove = this._button('Rimuovi', 'brc-editor__remove');
+      remove.addEventListener('click', () => options.onChange(values.filter((_, i) => i !== valueIndex)));
+      row.append(picker, remove);
+      wrapper.appendChild(row);
+    });
+
+    const addPicker = this._entityPicker({
+      label: `Aggiungi ${options.label.toLowerCase()}`,
+      value: '',
+      areaId: options.areaId,
+      domains: options.domains,
+      onValue: (value) => {
+        if (value && !values.includes(value)) options.onChange([...values, value]);
+      }
+    });
+    wrapper.appendChild(addPicker);
+    return wrapper;
+  }
+
+  _areaPicker(value, onValue) {
+    const picker = document.createElement('ha-area-picker');
+    picker.hass = this._hass;
+    picker.label = 'Area';
+    picker.value = value || '';
+    picker.addEventListener('value-changed', (event) => onValue(event.detail ? event.detail.value : undefined));
+    return picker;
+  }
+
+  _iconPicker(value, onValue) {
+    const picker = document.createElement('ha-icon-picker');
+    picker.hass = this._hass;
+    picker.label = 'Icona';
+    picker.value = value || '';
+    picker.addEventListener('value-changed', (event) => onValue(event.detail ? event.detail.value : undefined));
+    return picker;
+  }
+
+  _textField(label, value, onValue) {
+    const field = document.createElement('ha-textfield');
+    field.label = label;
+    field.value = value;
+    field.addEventListener('change', () => onValue(field.value));
+    return field;
+  }
+
+  _switch(label, checked, onChange) {
+    const row = document.createElement('div');
+    row.className = 'brc-editor__switch';
+    const text = document.createElement('span');
+    text.textContent = label;
+    const control = document.createElement('ha-switch');
+    control.checked = checked;
+    control.addEventListener('change', () => onChange(control.checked));
+    row.append(text, control);
+    return row;
+  }
+
+  _panel(title, expanded = false) {
+    const panel = document.createElement('ha-expansion-panel');
+    panel.header = title;
+    panel.setAttribute('outlined', '');
+    panel.expanded = expanded;
+    const content = document.createElement('div');
+    content.className = 'brc-editor__panel-content';
+    panel.appendChild(content);
+    return { panel, content };
+  }
+
+  _button(text, className) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = text;
+    return button;
+  }
+
+  _updateRoom(index, patch, rerender = false) {
+    const rooms = this._config.rooms.map((room, roomIndex) => (
+      roomIndex === index ? { ...room, ...patch } : room
+    ));
+    this._setConfig({ ...this._config, rooms }, rerender);
+  }
+
+  _updateTapAction(index, key, value) {
+    const room = this._config.rooms[index] || {};
+    const actions = { ...(room.tap_actions || {}) };
+    if (isEmptyObject(value)) delete actions[key];
+    else actions[key] = value;
+    this._updateRoom(index, { tap_actions: Object.keys(actions).length ? actions : undefined });
   }
 
   _setConfig(config, rerender) {
@@ -327,6 +419,14 @@ export class BubbleRoomsCardEditor extends BaseHTMLElement {
     if (rerender) this._render();
   }
 
+  _roomName(room, index) {
+    if (room.name) return room.name;
+    if (room.area && this._hass && this._hass.areas && this._hass.areas[room.area]) {
+      return this._hass.areas[room.area].name;
+    }
+    return `Stanza ${index + 1}`;
+  }
+
   _styleElement() {
     const style = document.createElement('style');
     style.textContent = `
@@ -337,14 +437,26 @@ export class BubbleRoomsCardEditor extends BaseHTMLElement {
         border: 1px solid var(--divider-color);
         border-radius: 12px;
       }
-      .brc-editor__header {
+      .brc-editor__header, .brc-editor__switch, .brc-editor__list-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        margin-bottom: 12px;
       }
+      .brc-editor__header { margin-bottom: 12px; }
       .brc-editor__header h3 { margin: 0; font-size: 1rem; }
+      .brc-editor__panel-content { padding: 12px; }
+      .brc-editor__field, .brc-editor__list, .brc-editor__yaml-field, .brc-editor__switch {
+        margin-bottom: 16px;
+      }
+      .brc-editor__field ha-entity-picker, .brc-editor__list-row .brc-editor__field,
+      ha-area-picker, ha-textfield, ha-icon-picker { width: 100%; }
+      .brc-editor__row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+      .brc-editor__helper { margin-top: 4px; color: var(--secondary-text-color); font-size: 0.85rem; }
+      .brc-editor__list-title { margin-bottom: 8px; font-weight: 600; }
+      .brc-editor__list-row .brc-editor__field { margin-bottom: 0; flex: 1 1 auto; }
+      .brc-editor__yaml-field > label { display: block; margin-bottom: 6px; font-weight: 600; }
+      .brc-editor__yaml-field ha-yaml-editor { display: block; }
       .brc-editor__add, .brc-editor__remove {
         min-height: 36px;
         padding: 0 14px;
@@ -354,18 +466,10 @@ export class BubbleRoomsCardEditor extends BaseHTMLElement {
         font-weight: 600;
         cursor: pointer;
       }
-      .brc-editor__add {
-        color: var(--text-primary-color, #fff);
-        background: var(--primary-color);
-      }
-      .brc-editor__remove {
-        color: var(--primary-color);
-        background: transparent;
-      }
-      .brc-editor__empty {
-        margin-bottom: 16px;
-        color: var(--secondary-text-color);
-      }
+      .brc-editor__add { color: var(--text-primary-color, #fff); background: var(--primary-color); }
+      .brc-editor__remove { color: var(--primary-color); background: transparent; }
+      .brc-editor__empty { margin-bottom: 16px; color: var(--secondary-text-color); }
+      @media (max-width: 500px) { .brc-editor__row { grid-template-columns: 1fr; } }
     `;
     return style;
   }
